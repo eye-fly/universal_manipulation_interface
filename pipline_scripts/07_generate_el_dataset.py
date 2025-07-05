@@ -19,6 +19,11 @@ import multiprocessing
 import concurrent.futures
 from tqdm import tqdm
 from collections import defaultdict
+from torchcodec.decoders import VideoDecoder
+import time
+import torch
+import threading
+
 from src.universal_manipulation_interface.umi.common.cv_util import (
     parse_fisheye_intrinsics,
     FisheyeRectConverter,
@@ -41,7 +46,7 @@ register_codecs()
 # %%
 @click.command()
 @click.argument('input', nargs=-1)
-@click.option('-o', '--output', required=True, help='Zarr path')
+@click.option('-o', '--output', required=False, help='Zarr path')
 @click.option('-or', '--out_res', type=str, default='224,224')
 @click.option('-of', '--out_fov', type=float, default=None)
 @click.option('-cl', '--compression_level', type=int, default=99)
@@ -50,9 +55,9 @@ register_codecs()
 @click.option('-n', '--num_workers', type=int, default=None)
 def main(input, output, out_res, out_fov, compression_level, 
          no_mirror, mirror_swap, num_workers):
-    if os.path.isfile(output):
-        if click.confirm(f'Output file {output} exists! Overwrite?', abort=True):
-            pass
+    # if os.path.isfile(output):
+    #     if click.confirm(f'Output file {output} exists! Overwrite?', abort=True):
+    #         pass
         
     out_res = tuple(int(x) for x in out_res.split(','))
 
@@ -93,9 +98,24 @@ def main(input, output, out_res, out_fov, compression_level,
                 mirror_mask, color=(0,0,0), mirror=True, gripper=False, finger=False)
             is_mirror = (mirror_mask[...,0] == 0)
         
+        # from torchcodec.decoders._video_decoder import supported_devices
+        print(f"{torch.__version__=}")
+        print(f"{torch.cuda.is_available()=}")
+        print(f"{torch.cuda.get_device_properties(0)=}")
+        # print(torchcodec.cuda.is_available())
+        print()
+        
+        # device = "cuda"  # or e.g. "cuda" !
+        # testtt =torch.rand(10).to(device)
+        # print(testtt)
+        # decoder= VideoDecoder(mp4_path, device=device)
+        # container = decoder[: ]
         with av.open(mp4_path) as container:
             in_stream = container.streams.video[0]
 
+        # print(container)
+        # print(container.shape)
+        # ih, iw = container.shape[2], container.shape[3]
             ih, iw = in_stream.height, in_stream.width
             resize_tf = get_image_transform(
                 in_res=(iw, ih),
@@ -104,7 +124,9 @@ def main(input, output, out_res, out_fov, compression_level,
 
             # in_stream.thread_type = "AUTO"
             in_stream.thread_count = 1
+
             buffer_idx = 0
+            # for frame_idx, frame in tqdm(enumerate(container), total=container.shape[0], leave=False):
             for frame_idx, frame in tqdm(enumerate(container.decode(in_stream)), total=in_stream.frames, leave=False):
                 # if curr_task_idx >= len(tasks):
                 #     # all tasks done
@@ -119,6 +141,9 @@ def main(input, output, out_res, out_fov, compression_level,
                     
                     # do current task
                     img = frame.to_ndarray(format='rgb24')
+                    # if(device =="cuda" ):
+                    #     frame = frame.device("cpu")
+                    # img = frame.permute(1, 2, 0).cpu().numpy()
 
                     # inpaint tags
                     this_det = tag_detection_results[frame_idx]
@@ -144,7 +169,7 @@ def main(input, output, out_res, out_fov, compression_level,
                     # print(img.shape)
                     img_array.append(img)
                     buffer_idx += 1
-        return img_array
+            return img_array
     
 
     
@@ -165,6 +190,8 @@ def main(input, output, out_res, out_fov, compression_level,
         use_videos=use_video,
 
     )
+    
+    mutex = threading.Lock()
 
     # dump lowdim data to replay buffer
     # generate argumnet for videos
@@ -220,10 +247,15 @@ def main(input, output, out_res, out_fov, compression_level,
             video_path = demos_path.joinpath(video_path_rel).absolute()
             assert video_path.is_file()
             video_start, video_end = camera['video_start_end']
+
+            start_time = time.time()
             video_arr = video_to_pic(video_path,{
                     'frame_start': video_start,
                      'frame_end': video_end,
                      }) #TODO: alternatively use ffmpg [lerobot/common/dataset/video_util.py -> encode_video_frames] but masking/fish eye needs to be done elswhere/after conversion
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+            print(f"video_to_pic took: {elapsed_time:.2f} seconds")
 
             # robot_name = f'robot{gripper_id}'
             # episode_data[robot_name + '_eef_pos'] = eef_pos.astype(np.float32)
@@ -232,8 +264,8 @@ def main(input, output, out_res, out_fov, compression_level,
             # episode_data[robot_name + '_demo_start_pose'] = demo_start_pose
             # episode_data[robot_name + '_demo_end_pose'] = demo_end_pose
 
-            # print(eef_pose.shape)
-            # print(len(video_arr))
+            print(eef_pose.shape)
+            print(len(video_arr))
             # print(video_arr)
             frame_n = gripper['tcp_pose'].shape[0]
             for frame_i in range(frame_n):

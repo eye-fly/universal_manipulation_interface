@@ -544,6 +544,7 @@ name = "example"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "cmake" },
     { name = "ffmpeg-python" },
     { name = "imagecodecs" },
     { name = "lerobot" },
@@ -552,6 +553,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "cmake", specifier = ">=3.29.0.1" },
     { name = "ffmpeg-python", specifier = ">=0.2.0" },
     { name = "imagecodecs", specifier = "==2023.9.18" },
     { name = "lerobot", git = "https://github.com/huggingface/lerobot?rev=5e9473806c78a969f13e2faf941ba1b2950649c4" },

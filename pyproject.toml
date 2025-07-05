@@ -7,6 +7,9 @@ requires-python = ">=3.10"
 dependencies = [
 	"lerobot",
 	"ffmpeg-python>=0.2.0",
+	"cmake>=3.29.0.1",
+	# "torchcodec",
+	# "torch>=2.7.1",
 
 	#UMI dep
 	"scipy>=1.11",
@@ -16,7 +19,19 @@ dependencies = [
 
 [tool.uv.sources]
 lerobot = { git = "https://github.com/huggingface/lerobot", rev = "5e9473806c78a969f13e2faf941ba1b2950649c4" }
+# torch = {index = "pytorch-cu129"}
+# torchcodec = {index = "torchcodec-cu126"}
 
 [tool.setuptools]
 packages = ["lbot"]  # Explicitly list packages
 package-dir = {""= "src"} 
+
+
+# [[tool.uv.index]]
+# name = "torchcodec-cu126"
+# url = "https://download.pytorch.org/whl/cu128"
+
+
+# [[tool.uv.index]]
+# name = "pytorch-cu129"
+# url = "https://download.pytorch.org/whl/cu129"

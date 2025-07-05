@@ -144,7 +144,8 @@ def visualize_dataset(
 
     logging.info("Logging to Rerun")
 
-    print(dataset.meta.features)
+    # print(dataset.meta.features)
+    print(dataset.stats)
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         # iterate over the batch
         for i in range(len(batch["index"])):
@@ -166,9 +167,10 @@ def visualize_dataset(
                 for dim_idx, val in enumerate(batch["observation.state.pose"][i]):
                     name = dataset.meta.features["observation.state.pose"]["names"][dim_idx]
                     rr.log(f"state/{name}", rr.Scalar(val.item()))
-            # if "observation.state.gripper" in batch:
-            #     for dim_idx, val in enumerate(batch["observation.state.gripper"][i]):
-            #         rr.log(f"state/{dim_idx}", rr.Scalar(val.item()))
+
+            # print(batch["observation.state.gripper"][i])
+            if "observation.state.gripper" in batch:
+                rr.log(f"state/gripper", rr.Scalar(batch["observation.state.gripper"][i].item()))
         
 
             if "next.done" in batch:
@@ -289,7 +291,7 @@ def main():
     tolerance_s = kwargs.pop("tolerance_s")
 
     logging.info("Loading dataset")
-    dataset = LeRobotDataset(repo_id, episodes=[0], root=root, tolerance_s=tolerance_s)
+    dataset = LeRobotDataset(repo_id, episodes=range(50), root=root, tolerance_s=tolerance_s)
 
     visualize_dataset(dataset, **vars(args))
 
