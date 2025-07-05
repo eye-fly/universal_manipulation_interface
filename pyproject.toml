@@ -1,0 +1,22 @@
+[project]
+name = "example"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+	"lerobot",
+	"ffmpeg-python>=0.2.0",
+
+	#UMI dep
+	"scipy>=1.11",
+	"imagecodecs==2023.9.18",
+]
+
+
+[tool.uv.sources]
+lerobot = { git = "https://github.com/huggingface/lerobot", rev = "5e9473806c78a969f13e2faf941ba1b2950649c4" }
+
+[tool.setuptools]
+packages = ["lbot"]  # Explicitly list packages
+package-dir = {""= "src"} 
