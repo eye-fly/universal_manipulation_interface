@@ -99,11 +99,11 @@ def main(input, output, out_res, out_fov, compression_level,
             is_mirror = (mirror_mask[...,0] == 0)
         
         # from torchcodec.decoders._video_decoder import supported_devices
-        print(f"{torch.__version__=}")
-        print(f"{torch.cuda.is_available()=}")
-        print(f"{torch.cuda.get_device_properties(0)=}")
-        # print(torchcodec.cuda.is_available())
-        print()
+        # print(f"{torch.__version__=}")
+        # print(f"{torch.cuda.is_available()=}")
+        # print(f"{torch.cuda.get_device_properties(0)=}")
+        # # print(torchcodec.cuda.is_available())
+        # print()
         
         # device = "cuda"  # or e.g. "cuda" !
         # testtt =torch.rand(10).to(device)
@@ -174,7 +174,7 @@ def main(input, output, out_res, out_fov, compression_level,
 
     
     # lerobot dataset
-    repo_id="eyefly2/test" #TODO 
+    repo_id="eyefly2/test2" #TODO 
     use_video = True #TODO
     fps = 10 #TODO
     task = "cup arrangment" #TODO
@@ -192,81 +192,41 @@ def main(input, output, out_res, out_fov, compression_level,
     )
     
     mutex = threading.Lock()
+    def process_whole_video(plan_episode):
+        grippers = plan_episode['grippers']
+        cameras = plan_episode['cameras']
 
-    # dump lowdim data to replay buffer
-    # generate argumnet for videos
-    n_grippers = None
-    n_cameras = None
-    buffer_start = 0
-    all_videos = set()
-    vid_args = list()
-    videos_used = 0
-    for ipath in input:
-        ipath = pathlib.Path(os.path.expanduser(ipath)).absolute()
-        demos_path = ipath.joinpath('demos')
-        plan_path = ipath.joinpath('dataset_plan.pkl')
-        if not plan_path.is_file():
-            print(f"Skipping {ipath.name}: no dataset_plan.pkl")
-            continue
+        # TODO: currently onli MONOSETUP
+        gripper = grippers[0]
+        camera = cameras[0]
+
+        eef_pose = gripper['tcp_pose']
+        # eef_pos = eef_pose[...,:3]
+        # eef_rot = eef_pose[...,3:]
+        gripper_widths = gripper['gripper_width']
+        # demo_start_pose = np.empty_like(eef_pose)
+        # demo_start_pose[:] = gripper['demo_start_pose']
+        # demo_end_pose = np.empty_like(eef_pose)
+        # demo_end_pose[:] = gripper['demo_end_pose']
         
-        plan = pickle.load(plan_path.open('rb'))
-        
-        videos_dict = defaultdict(list)
-        for plan_episode in plan:
-            grippers = plan_episode['grippers']
-            
-            # check that all episodes have the same number of grippers 
-            if n_grippers is None:
-                n_grippers = len(grippers)
-            else:
-                assert n_grippers == len(grippers)
-                
-            cameras = plan_episode['cameras']
-            if n_cameras is None:
-                n_cameras = len(cameras)
-            else:
-                assert n_cameras == len(cameras)
-                
-            episode_data = dict()
-            # for gripper_id, gripper in enumerate(grippers):    
+        video_path_rel = camera['video_path']
+        video_path = demos_path.joinpath(video_path_rel).absolute()
+        assert video_path.is_file()
+        video_start, video_end = camera['video_start_end']
 
-            # TODO: currently onli MONOSETUP
-            gripper = grippers[0]
-            camera = cameras[0]
+        start_time = time.time()
+        video_arr = video_to_pic(video_path,{
+                'frame_start': video_start,
+                    'frame_end': video_end,
+                    }) #TODO: alternatively use ffmpg /torch codec
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        print(f"video_to_pic took: {elapsed_time:.2f} seconds")
 
-            eef_pose = gripper['tcp_pose']
-            # eef_pos = eef_pose[...,:3]
-            # eef_rot = eef_pose[...,3:]
-            gripper_widths = gripper['gripper_width']
-            # demo_start_pose = np.empty_like(eef_pose)
-            # demo_start_pose[:] = gripper['demo_start_pose']
-            # demo_end_pose = np.empty_like(eef_pose)
-            # demo_end_pose[:] = gripper['demo_end_pose']
-            
-            video_path_rel = camera['video_path']
-            video_path = demos_path.joinpath(video_path_rel).absolute()
-            assert video_path.is_file()
-            video_start, video_end = camera['video_start_end']
-
-            start_time = time.time()
-            video_arr = video_to_pic(video_path,{
-                    'frame_start': video_start,
-                     'frame_end': video_end,
-                     }) #TODO: alternatively use ffmpg [lerobot/common/dataset/video_util.py -> encode_video_frames] but masking/fish eye needs to be done elswhere/after conversion
-            end_time = time.time()
-            elapsed_time = end_time - start_time
-            print(f"video_to_pic took: {elapsed_time:.2f} seconds")
-
-            # robot_name = f'robot{gripper_id}'
-            # episode_data[robot_name + '_eef_pos'] = eef_pos.astype(np.float32)
-            # episode_data[robot_name + '_eef_rot_axis_angle'] = eef_rot.astype(np.float32)
-            # episode_data[robot_name + '_gripper_width'] = np.expand_dims(gripper_widths, axis=-1).astype(np.float32)
-            # episode_data[robot_name + '_demo_start_pose'] = demo_start_pose
-            # episode_data[robot_name + '_demo_end_pose'] = demo_end_pose
-
-            print(eef_pose.shape)
-            print(len(video_arr))
-            # print(video_arr)
+        print(eef_pose.shape)
+        print(len(video_arr))
+        # print(video_arr)
+        with mutex:
             frame_n = gripper['tcp_pose'].shape[0]
             for frame_i in range(frame_n):
                 frame = dict()
@@ -281,9 +241,61 @@ def main(input, output, out_res, out_fov, compression_level,
 
                 dataset.add_frame(frame)
             dataset.save_episode()
-            videos_used+=1
-            break
-        break
+
+
+    # dump lowdim data to replay buffer
+    # generate argumnet for videos
+    n_grippers = None
+    n_cameras = None
+    # buffer_start = 0
+    # all_videos = set()
+    vid_args = list()
+    videos_used = 0
+    for ipath in input:
+        ipath = pathlib.Path(os.path.expanduser(ipath)).absolute()
+        demos_path = ipath.joinpath('demos')
+        plan_path = ipath.joinpath('dataset_plan.pkl')
+        if not plan_path.is_file():
+            print(f"Skipping {ipath.name}: no dataset_plan.pkl")
+            continue
+        
+        plan = pickle.load(plan_path.open('rb'))
+        
+
+        with tqdm(total=len(plan)) as pbar:
+            # one chunk per thread, therefore no synchronization needed
+            with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+                futures = set()
+                for plan_episode in plan:
+                    if len(futures) >= num_workers:
+                        # limit number of inflight tasks
+                        completed, futures = concurrent.futures.wait(futures, 
+                            return_when=concurrent.futures.FIRST_COMPLETED)
+                        pbar.update(len(completed))
+
+                    grippers = plan_episode['grippers']
+                    # check that all episodes have the same number of grippers 
+                    if n_grippers is None:
+                        n_grippers = len(grippers)
+                    else:
+                        assert n_grippers == len(grippers)
+                        
+                    cameras = plan_episode['cameras']
+                    if n_cameras is None:
+                        n_cameras = len(cameras)
+                    else:
+                        assert n_cameras == len(cameras)
+                        
+                    futures.add(executor.submit(process_whole_video, plan_episode))
+                    videos_used+=1
+                    # process_whole_video(plan_episode)#==========================
+
+                completed, futures = concurrent.futures.wait(futures)
+                pbar.update(len(completed))
+            
+        # videos_dict = defaultdict(list)
+        
+            
 
 
             
@@ -339,24 +351,24 @@ def main(input, output, out_res, out_fov, compression_level,
                 # else:
                 #     assert False
                     
-    # with tqdm(total=len(vid_args)) as pbar:
-    #     # one chunk per thread, therefore no synchronization needed
-    #     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-    #         futures = set()
-    #         for mp4_path, tasks in vid_args:
-    #             if len(futures) >= num_workers:
-    #                 # limit number of inflight tasks
-    #                 completed, futures = concurrent.futures.wait(futures, 
-    #                     return_when=concurrent.futures.FIRST_COMPLETED)
-    #                 pbar.update(len(completed))
+    with tqdm(total=len(vid_args)) as pbar:
+        # one chunk per thread, therefore no synchronization needed
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+            futures = set()
+            for mp4_path, tasks in vid_args:
+                if len(futures) >= num_workers:
+                    # limit number of inflight tasks
+                    completed, futures = concurrent.futures.wait(futures, 
+                        return_when=concurrent.futures.FIRST_COMPLETED)
+                    pbar.update(len(completed))
 
-    #             futures.add(executor.submit(video_to_zarr, 
-    #                 out_replay_buffer, mp4_path, tasks))
+                futures.add(executor.submit(video_to_zarr, 
+                    out_replay_buffer, mp4_path, tasks))
 
-    #         completed, futures = concurrent.futures.wait(futures)
-    #         pbar.update(len(completed))
+            completed, futures = concurrent.futures.wait(futures)
+            pbar.update(len(completed))
 
-    # print([x.result() for x in completed])
+    print([x.result() for x in completed])
 
     # # dump to disk
     # print(f"Saving ReplayBuffer to {output}")

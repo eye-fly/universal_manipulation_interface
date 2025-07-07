@@ -145,13 +145,14 @@ def visualize_dataset(
     logging.info("Logging to Rerun")
 
     # print(dataset.meta.features)
-    print(dataset.stats)
+    # print(dataset.stats)
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         # iterate over the batch
         for i in range(len(batch["index"])):
             # rr.set_time_sequence("frame_index", batch["frame_index"][i].item())
             # rr.set_time_seconds("timestamp", batch["timestamp"][i].item())
-
+            
+            # print("i === ",i)
             # display each camera image
             for key in dataset.meta.camera_keys:
                 # TODO(rcadene): add `.compress()`? is it lossless?
@@ -290,8 +291,8 @@ def main():
     root = kwargs.pop("root")
     tolerance_s = kwargs.pop("tolerance_s")
 
-    logging.info("Loading dataset")
-    dataset = LeRobotDataset(repo_id, episodes=range(50), root=root, tolerance_s=tolerance_s)
+    logging.info("Loading dataset") #episodes=range(50),
+    dataset = LeRobotDataset(repo_id,  root=root, tolerance_s=tolerance_s)
 
     visualize_dataset(dataset, **vars(args))
 

@@ -668,6 +668,12 @@ def main(input, output, tcp_offset, tx_slam_tag,
 
             gripper_timestamps = list()
             gripper_widths = list()
+            print("=========================")
+            # print(tag_detection_results)
+            print(nominal_z)
+            # nominal_z = 0.0543
+            print("=========================")
+
             for td in tag_detection_results:
                 width = get_gripper_width(td['tag_dict'], 
                     left_id=left_id, right_id=right_id, 
@@ -675,6 +681,9 @@ def main(input, output, tcp_offset, tx_slam_tag,
                 if width is not None:
                     gripper_timestamps.append(td['time'])
                     gripper_widths.append(gripper_cal_interp(width))
+            # print("=========================")
+            # print(gripper_timestamps, gripper_widths)
+            # print("=========================")
             gripper_interp = get_interp1d(gripper_timestamps, gripper_widths)
             
             gripper_det_ratio = (len(gripper_widths) / len(tag_detection_results))

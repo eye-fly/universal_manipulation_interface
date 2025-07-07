@@ -234,6 +234,9 @@ def get_gripper_width(tag_dict, left_id, right_id, nominal_z=0.072, z_tolerance=
         if zmin < tvec[-1] < zmax:
             right_x = tvec[0]
 
+    # print(tag_dict[left_id]['tvec'][-1], "-", tag_dict[right_id]['tvec'][-1])
+    # print(left_x, "=",right_x)
+
     width = None
     if (left_x is not None) and (right_x is not None):
         width = right_x - left_x
@@ -241,6 +244,7 @@ def get_gripper_width(tag_dict, left_id, right_id, nominal_z=0.072, z_tolerance=
         width = abs(left_x) * 2
     elif right_x is not None:
         width = abs(right_x) * 2
+    # print(width)
     return width
 
 

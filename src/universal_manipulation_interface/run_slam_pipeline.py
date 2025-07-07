@@ -110,7 +110,8 @@ def main(session_dir, calibration_dir):
         assert script_path.is_file()
         cmd = [
             'python', str(script_path),
-            '--input', str(session)
+            '--input', str(session),
+            '-nz',  '0.0543',
         ]
         result = subprocess.run(cmd)
         assert result.returncode == 0
