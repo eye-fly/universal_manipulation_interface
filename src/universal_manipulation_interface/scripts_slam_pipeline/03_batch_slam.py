@@ -104,7 +104,8 @@ def main(input_dir, map_path, docker_image, num_workers, max_lost_frames, timeou
                 map_mount_source = map_path
                 map_mount_target = pathlib.Path('/map').joinpath(map_mount_source.name)
 
-                slam_cam_settings = pathlib.Path("/home/pzero/nomagic/example/src/universal_manipulation_interface/slam") #TODO: make proper relative path
+                slam_cam_settings = os.getenv("SLAM_SET_PATH")
+                # /home/pzero/nomagic/example/src/universal_manipulation_interface/slam/gopro12_black_maxlens_fisheye_setting_v1.yaml
 
                 # run SLAM
                 cmd = [

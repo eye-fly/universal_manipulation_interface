@@ -3,9 +3,26 @@ sudo apt install -y libosmesa6-dev libgl1-mesa-glx libglfw3 patchelf
 sudo apt-get install ffmpeg
 
 
-mamba env create -f universal_manipulation_interface/conda_environment.yaml
+
+docker build -t umi .
+
+1. 
+VIDEO_FULLPATH="$(realpath ~/Wideo/vid2)"
+docker run --rm -it -v  $VIDEO_FULLPATH:$VIDEO_FULLPATH \
+  -e VIDEO_FULLPATH="$VIDEO_FULLPATH" -e SLAM_SET_PATH="$SLAM_SET_PATH" \
+  -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock \
+  umi
+2. conda run -n umi python /workspace/UMI/src/universal_manipulation_interface/run_slam_pipeline.py $VIDEO_FULLPATH
 
 
+
+
+
+
+mamba env create -f /workspace/UMI/src/universal_manipulation_interface/conda_environment.yaml -y
+
+
+conda run -n umi python src/universal_manipulation_interface/run_slam_pipeline.py ~videos/
 
 run pipline
 conda run -n umi /home/pzero/miniforge3/envs/umi/bin/python src/universal_manipulation_interface/run_slam_pipeline.py /home/pzero/nomagic/example/videos/
@@ -14,6 +31,7 @@ conda run -n umi /home/pzero/miniforge3/envs/umi/bin/python src/universal_manipu
 uv run pipline_scripts/07_generate_el_dataset.py example_demo_session/
 
 uv run pipline_scripts/visualize.py --repo-id eyefly2/test --episode-index 0
+
 
 
 
@@ -69,3 +87,14 @@ and same for script_path = script_dir.joinpath('calibrate_gripper_range.py') [in
 
 
 ./Examples/Monocular-Inertial/gopro_slam -i /home/pzero/nomagic/example/videos/demos/mapping/raw_video.mp4 -j /home/pzero/nomagic/example/videos/demos/mapping/imu_data.json -g --mask_img /home/pzero/nomagic/example/videos/demos/demo_C3501326231484_2025.07.11_14.51.21.778350/slam_mask.png -s /home/pzero/nomagic/example/src/universal_manipulation_interface/slam/gopro12_black_maxlens_fisheye_setting_v1.yaml -v Vocabulary/ORBvoc.txt --save_map /home/pzero/nomagic/example/videos/demos/mapping/worse_map_atlas.osa
+
+
+
+
+docker run --rm --volume /VideoIn/vid1/demos/mapping:/data chicheng/openicc:latest node /OpenImuCameraCalibrator/javascript/extract_metadata_single.js /data/raw_video.mp4 /data/imu_data.json
+
+
+
+scp -P 6022 -r ~/Videos/test jmuszynski@nomagiclab.mimuw.edu.pl:~/Wideo/vid1
+
+cat /home/jmuszynski/Wideo/vid2/demos/mapping/slam_stderr.txt
