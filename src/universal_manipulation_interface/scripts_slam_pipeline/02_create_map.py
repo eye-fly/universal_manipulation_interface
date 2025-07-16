@@ -67,6 +67,8 @@ def main(input_dir, map_path, docker_image, no_docker_pull, no_mask):
     map_mount_source = pathlib.Path(map_path)
     map_mount_target = pathlib.Path('/map').joinpath(map_mount_source.name)
 
+    slam_cam_settings = pathlib.Path("/home/pzero/nomagic/example/src/universal_manipulation_interface/slam") #TODO: make proper relative path
+# /home/pzero/nomagic/example/src/universal_manipulation_interface/slam/gopro12_black_maxlens_fisheye_setting_v1.yaml
     # run SLAM
     cmd = [
         'docker',
@@ -74,10 +76,11 @@ def main(input_dir, map_path, docker_image, no_docker_pull, no_mask):
         '--rm', # delete after finish
         '--volume', str(video_dir) + ':' + '/data',
         '--volume', str(map_mount_source.parent) + ':' + str(map_mount_target.parent),
+        '--volume', str(slam_cam_settings)+ ':' + '/slam_settings',
         docker_image,
         '/ORB_SLAM3/Examples/Monocular-Inertial/gopro_slam',
         '--vocabulary', '/ORB_SLAM3/Vocabulary/ORBvoc.txt',
-        '--setting', '/ORB_SLAM3/Examples/Monocular-Inertial/gopro10_maxlens_fisheye_setting_v1_720.yaml',
+        '--setting', 'slam_settings/gopro12_black_maxlens_fisheye_setting_v1.yaml',
         '--input_video', str(video_path),
         '--input_imu_json', str(json_path),
         '--output_trajectory_csv', str(csv_path),

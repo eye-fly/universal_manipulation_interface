@@ -23,6 +23,8 @@ from torchcodec.decoders import VideoDecoder
 import time
 import torch
 import threading
+from scipy.spatial.transform import Rotation as R
+
 
 from src.universal_manipulation_interface.umi.common.cv_util import (
     parse_fisheye_intrinsics,
@@ -174,10 +176,11 @@ def main(input, output, out_res, out_fov, compression_level,
 
     
     # lerobot dataset
-    repo_id="eyefly2/test2" #TODO 
+    repo_id="eyefly2/delta_test2" #TODO 
     use_video = True #TODO
     fps = 10 #TODO
-    task = "cup arrangment" #TODO
+    # task = "cup arrangment" #TODO
+    tasks = ["front/back","left/right", "down/up","around x ccw", "around z to left", "around y to down" ]
 
     check_repo_id(repo_id)
     
@@ -191,8 +194,13 @@ def main(input, output, out_res, out_fov, compression_level,
 
     )
     
+    def euler_fix_delta(delta):
+        # delta = euler2 - euler1
+        delta = (delta + np.pi) % (2 * np.pi) - np.pi
+        return delta
+
     mutex = threading.Lock()
-    def process_whole_video(plan_episode):
+    def process_whole_video(plan_episode, plan_nr):
         grippers = plan_episode['grippers']
         cameras = plan_episode['cameras']
 
@@ -226,20 +234,61 @@ def main(input, output, out_res, out_fov, compression_level,
         print(eef_pose.shape)
         print(len(video_arr))
         # print(video_arr)
+
+        
         with mutex:
             frame_n = gripper['tcp_pose'].shape[0]
+
+            last_pose = None
+            last_gripper = None
             for frame_i in range(frame_n):
                 frame = dict()
-                frame["task"] = task
-
-                frame["observation.state.pose"] = eef_pose[frame_i].astype('float32') #TODO check conversion
-                frame["observation.state.gripper"] = np.array( [gripper_widths[frame_i]]).astype('float32')
-                frame["observation.images"] = video_arr[frame_i]
+                frame["task"] = tasks[plan_nr]
                 
+                # currently with symulation x,y shoud be swaped,
+                # what currently is called in dataset roll should be 
+                crr_pose = eef_pose[frame_i].astype('float32') #TODO check conversion
+                rot = crr_pose[3:]
+                crr_pose[3:] = R.from_rotvec(rot).as_euler('yxz') # x,y axis are sitched 
+                # print(crr_pose[3:])
+                crr_gripper = np.array( [gripper_widths[frame_i]]).astype('float32')
+                if last_pose is not None:
+                    
+                    # print(last_pose - crr_pose)
+                    frame["observation.state.pose"] =last_pose - crr_pose
+                    frame["observation.state.gripper"] = last_gripper-crr_gripper
+
+                    
+                    
+                
+                else:
+                    print(crr_pose)
+                    frame["observation.state.pose"] = np.zeros_like(crr_pose)
+                    frame["observation.state.gripper"] = np.zeros_like(crr_gripper)
+                
+                frame["observation.state.pose"][3:] = euler_fix_delta( frame["observation.state.pose"][3:])
+                # fix order of axis
+                # swap x with y axis
+                frame["observation.state.pose"][0], frame["observation.state.pose"][1] = frame["observation.state.pose"][1], frame["observation.state.pose"][0]
+                # reverse x, z
+                frame["observation.state.pose"][0] = -frame["observation.state.pose"][0]
+                frame["observation.state.pose"][2] = -frame["observation.state.pose"][2]
+
+                # reverse pitch and yaw
+                frame["observation.state.pose"][4] = -frame["observation.state.pose"][4]
+                frame["observation.state.pose"][5] = -frame["observation.state.pose"][5]
+                # swap pitch with yaw                
+                
+                # frame["observation.state.pose"][3] , frame["observation.state.pose"][4], frame["observation.state.pose"][5] = frame["observation.state.pose"][4], frame["observation.state.pose"][3], frame["observation.state.pose"][5]
+
+
+                frame["observation.images"] = video_arr[frame_i]
                 tpf = 1.0/fps
                 frame["timestamps"] = np.array([tpf*frame_i]).astype('float32')
 
                 dataset.add_frame(frame)
+                last_pose = crr_pose
+                last_gripper = crr_gripper
             dataset.save_episode()
 
 
@@ -261,7 +310,8 @@ def main(input, output, out_res, out_fov, compression_level,
         
         plan = pickle.load(plan_path.open('rb'))
         
-
+        
+        plan_nr = 0
         with tqdm(total=len(plan)) as pbar:
             # one chunk per thread, therefore no synchronization needed
             with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
@@ -285,9 +335,11 @@ def main(input, output, out_res, out_fov, compression_level,
                         n_cameras = len(cameras)
                     else:
                         assert n_cameras == len(cameras)
-                        
-                    futures.add(executor.submit(process_whole_video, plan_episode))
+                    
+                    # process_whole_video(plan_episode, plan_nr) #FOR debug only
+                    futures.add(executor.submit(process_whole_video, plan_episode, plan_nr))
                     videos_used+=1
+                    plan_nr +=1
                     # process_whole_video(plan_episode)#==========================
 
                 completed, futures = concurrent.futures.wait(futures)
@@ -381,3 +433,4 @@ def main(input, output, out_res, out_fov, compression_level,
 # %%
 if __name__ == "__main__":
     main()
+
