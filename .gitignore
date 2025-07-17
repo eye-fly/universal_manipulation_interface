@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+
+# dataset
+test/*
+example_demo_session/*
+zarr_folder/*
+videos/*
+viedos2/*
+# Virtual environments
+.venv
+
+.env

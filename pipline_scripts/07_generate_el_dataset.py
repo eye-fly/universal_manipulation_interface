@@ -18,8 +18,6 @@ import av
 import multiprocessing
 import concurrent.futures
 from tqdm import tqdm
-from collections import defaultdict
-from torchcodec.decoders import VideoDecoder
 import time
 import torch
 import threading
@@ -48,14 +46,14 @@ register_codecs()
 # %%
 @click.command()
 @click.argument('input', nargs=-1)
-@click.option('-o', '--output', required=False, help='Zarr path')
+@click.option('-rp', '--repo_id', required=True, help='hf dataset name')
 @click.option('-or', '--out_res', type=str, default='224,224')
 @click.option('-of', '--out_fov', type=float, default=None)
-@click.option('-cl', '--compression_level', type=int, default=99)
+# @click.option('-cl', '--compression_level', type=int, default=99)
 @click.option('-nm', '--no_mirror', is_flag=True, default=False, help="Disable mirror observation by masking them out")
 @click.option('-ms', '--mirror_swap', is_flag=True, default=False)
 @click.option('-n', '--num_workers', type=int, default=None)
-def main(input, output, out_res, out_fov, compression_level, 
+def main(input, repo_id, out_res, out_fov, 
          no_mirror, mirror_swap, num_workers):
     # if os.path.isfile(output):
     #     if click.confirm(f'Output file {output} exists! Overwrite?', abort=True):
@@ -176,7 +174,6 @@ def main(input, output, out_res, out_fov, compression_level,
 
     
     # lerobot dataset
-    repo_id="eyefly2/delta_test2" #TODO 
     use_video = True #TODO
     fps = 10 #TODO
     # task = "cup arrangment" #TODO
