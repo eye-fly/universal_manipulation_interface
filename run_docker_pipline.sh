@@ -106,7 +106,7 @@ else
     echo "in"
 
     # remove cached dataset if present
-    CACHE_PATH="$HOME/.cache/huggingface/lerobot/eyefly2/$DATASET_NAME"
+    CACHE_PATH="$HOME/.cache/huggingface/lerobot/$DATASET_NAME"
     if [ -d "$CACHE_PATH" ]; then
 
       if  confirm "Delete all files at $CACHE_PATH ?"; then
