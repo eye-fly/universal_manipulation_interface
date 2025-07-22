@@ -240,41 +240,40 @@ def main(input, repo_id, out_res, out_fov,
             for frame_i in range(frame_n):
                 frame = dict()
                 frame["task"] = tasks[plan_nr]
-                
-                # currently with symulation x,y shoud be swaped,
-                # what currently is called in dataset roll should be 
+
                 crr_pose = eef_pose[frame_i].astype('float32') #TODO check conversion
                 rot = crr_pose[3:]
-                crr_pose[3:] = R.from_rotvec(rot).as_euler('yxz') # x,y axis are sitched 
+                crr_pose[3:] = R.from_rotvec(rot).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 # print(crr_pose[3:])
 
-                # fix order of axis
-                # swap x with y axis
-                crr_pose[0], crr_pose[1] = crr_pose[1], crr_pose[0]
-                # reverse x, z
-                crr_pose[0] = -crr_pose[0]
-                crr_pose[2] = -crr_pose[2]
+                # # fix order of axis
+                # # swap x with y axis
+                # crr_pose[0], crr_pose[1] = crr_pose[1], crr_pose[0]
+                # # reverse x, z
+                # crr_pose[0] = -crr_pose[0]
+                # crr_pose[2] = -crr_pose[2]
 
-
+                # # reverse pitch and yaw
+                # frame["observation.state.pose"][4] = -frame["observation.state.pose"][4]
+                # frame["observation.state.pose"][5] = -frame["observation.state.pose"][5]
+                # # swap pitch with yaw       
 
 
 
                 frame["observation.state.pose"]  = crr_pose
                 frame["action.gripper"] = gripper_widths[frame_i]
                 
+                frame["action.pose"] = np.zeros_like(crr_pose)
+                if not (last_pose is None):
+                    frame["action.pose"][:3] = crr_pose[:3] - last_pose[:3]
 
-                #
-                
-                frame["observation.state.pose"][3:] = euler_fix_delta( frame["observation.state.pose"][3:])
-                
+                    #totation form last_pose to current 
+                    delta_rot, _ = R.align_vectors(crr_pose[3:], last_pose[3:])
+                    frame["action.pose"][3:] = delta_rot.as_euler("xyz")
 
-                # reverse pitch and yaw
-                frame["observation.state.pose"][4] = -frame["observation.state.pose"][4]
-                frame["observation.state.pose"][5] = -frame["observation.state.pose"][5]
-                # swap pitch with yaw                
-                
-                # frame["observation.state.pose"][3] , frame["observation.state.pose"][4], frame["observation.state.pose"][5] = frame["observation.state.pose"][4], frame["observation.state.pose"][3], frame["observation.state.pose"][5]
 
+
+         
 
                 frame["observation.images"] = video_arr[frame_i]
                 tpf = 1.0/fps
@@ -282,7 +281,6 @@ def main(input, repo_id, out_res, out_fov,
 
                 dataset.add_frame(frame)
                 last_pose = crr_pose
-                last_gripper = crr_gripper
             dataset.save_episode()
 
 
