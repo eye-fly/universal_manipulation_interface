@@ -49,6 +49,16 @@ in dataset:
     yaw[around z] -- counterclockwise(+)
     
 
+in nomagic
+
+  x  right(-) left(+)
+  y  forward(-) bacward(+)
+  z up(+)
+
+  roll [arund z] clockwise(-)
+  pitch [around x] clockwise(+)
+  yaw [around z] clockwise(+)
+
 notes:
 1. for slamp piline and current gripper:
     print("############# 06_generate_dataset_plan ###########")

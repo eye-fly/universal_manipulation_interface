@@ -237,7 +237,6 @@ def main(input, repo_id, out_res, out_fov,
             frame_n = gripper['tcp_pose'].shape[0]
 
             last_pose = None
-            last_gripper = None
             for frame_i in range(frame_n):
                 frame = dict()
                 frame["task"] = tasks[plan_nr]
@@ -248,28 +247,26 @@ def main(input, repo_id, out_res, out_fov,
                 rot = crr_pose[3:]
                 crr_pose[3:] = R.from_rotvec(rot).as_euler('yxz') # x,y axis are sitched 
                 # print(crr_pose[3:])
-                crr_gripper = np.array( [gripper_widths[frame_i]]).astype('float32')
-                if last_pose is not None:
-                    
-                    # print(last_pose - crr_pose)
-                    frame["observation.state.pose"] =last_pose - crr_pose
-                    frame["observation.state.gripper"] = last_gripper-crr_gripper
 
-                    
-                    
-                
-                else:
-                    print(crr_pose)
-                    frame["observation.state.pose"] = np.zeros_like(crr_pose)
-                    frame["observation.state.gripper"] = np.zeros_like(crr_gripper)
-                
-                frame["observation.state.pose"][3:] = euler_fix_delta( frame["observation.state.pose"][3:])
                 # fix order of axis
                 # swap x with y axis
-                frame["observation.state.pose"][0], frame["observation.state.pose"][1] = frame["observation.state.pose"][1], frame["observation.state.pose"][0]
+                crr_pose[0], crr_pose[1] = crr_pose[1], crr_pose[0]
                 # reverse x, z
-                frame["observation.state.pose"][0] = -frame["observation.state.pose"][0]
-                frame["observation.state.pose"][2] = -frame["observation.state.pose"][2]
+                crr_pose[0] = -crr_pose[0]
+                crr_pose[2] = -crr_pose[2]
+
+
+
+
+
+                frame["observation.state.pose"]  = crr_pose
+                frame["action.gripper"] = gripper_widths[frame_i]
+                
+
+                #
+                
+                frame["observation.state.pose"][3:] = euler_fix_delta( frame["observation.state.pose"][3:])
+                
 
                 # reverse pitch and yaw
                 frame["observation.state.pose"][4] = -frame["observation.state.pose"][4]
