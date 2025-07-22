@@ -241,7 +241,7 @@ def main(input, repo_id, out_res, out_fov,
                 frame = dict()
                 frame["task"] = tasks[plan_nr]
 
-                crr_pose = eef_pose[frame_i].astype('float32') #TODO check conversion
+                crr_pose = eef_pose[frame_i].astype('float32')
                 rot = crr_pose[3:]
                 crr_pose[3:] = R.from_rotvec(rot).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 # print(crr_pose[3:])
@@ -261,14 +261,14 @@ def main(input, repo_id, out_res, out_fov,
 
 
                 frame["observation.state.pose"]  = crr_pose
-                frame["action.gripper"] = gripper_widths[frame_i]
+                frame["action.gripper"] = np.array([gripper_widths[frame_i]], dtype='float32')
                 
                 frame["action.pose"] = np.zeros_like(crr_pose)
                 if not (last_pose is None):
                     frame["action.pose"][:3] = crr_pose[:3] - last_pose[:3]
 
                     #totation form last_pose to current 
-                    delta_rot, _ = R.align_vectors(crr_pose[3:], last_pose[3:])
+                    delta_rot = R.from_euler( "xyz", crr_pose[3:]) * R.from_euler( "xyz", crr_pose[3:]).inv()
                     frame["action.pose"][3:] = delta_rot.as_euler("xyz")
 
 
@@ -328,7 +328,7 @@ def main(input, repo_id, out_res, out_fov,
                     else:
                         assert n_cameras == len(cameras)
                     
-                    # process_whole_video(plan_episode, plan_nr) #FOR debug only
+ #                   process_whole_video(plan_episode, plan_nr) #FOR debug only
                     futures.add(executor.submit(process_whole_video, plan_episode, plan_nr))
                     videos_used+=1
                     plan_nr +=1
