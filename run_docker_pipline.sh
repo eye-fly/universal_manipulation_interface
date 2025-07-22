@@ -9,7 +9,6 @@ Upload videos to Hugging Face dataset with optional cleanup
 
 Options:
   -n <string>  Hugging Face dataset name (format: username/dataset-name)
-  -y           Automatically remove local dataset cache from ~/.cache/huggingface/lerobot/<ds-name>
   <path>       Relative or absolute path to videos folder (required)
 
 Examples:
@@ -69,6 +68,17 @@ confirm() {
 }
 
 
+# Load .env file
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs -d '\n')
+fi
+
+# Verify required variables
+if [ -z "$HF_TOKEN" ] && ["$DATASET_NAME" ]; then
+    echo "Error: HF_TOKEN not set but given uplad target hf_dataset name " >&2
+    exit 1
+fi
+
 
 #------------------------------------------------------------------------------------------------------
 
@@ -88,6 +98,7 @@ SLAM_SET_PATH="$SCRIPT_DIR/src/universal_manipulation_interface/slam"
 VIDEO_FULLPATH="$(realpath $1)"
 DC_RUN="docker run --rm -it -v  $VIDEO_FULLPATH:$VIDEO_FULLPATH \
     -e SLAM_SET_PATH="$SLAM_SET_PATH" \
+    -e HF_TOKEN="$HF_TOKEN" \
     -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock \
     umi bash -c"
 if ! [ -d "$VIDEO_FULLPATH" ]; then
@@ -104,16 +115,6 @@ else
 
   if [ "$DATASET_NAME" ]; then
     echo "in"
-
-    # remove cached dataset if present
-    CACHE_PATH="$HOME/.cache/huggingface/lerobot/$DATASET_NAME"
-    if [ -d "$CACHE_PATH" ]; then
-
-      if  confirm "Delete all files at $CACHE_PATH ?"; then
-        echo "Removing existing directory: $CACHE_PATH"
-        rm -rf "$CACHE_PATH"
-      fi
-    fi
 
     # reformat data and upload ds
     $DC_RUN "uv run pipline_scripts/07_generate_el_dataset.py --repo_id $DATASET_NAME $VIDEO_FULLPATH"
