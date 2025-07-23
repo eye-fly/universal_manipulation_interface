@@ -59,6 +59,12 @@ in nomagic
   pitch [around x] clockwise(+)
   yaw [around z] clockwise(+)
 
+
+TODO: change sing for x and y
+look for order and direction of rotations
+
+
+
 notes:
 1. for slamp piline and current gripper:
     print("############# 06_generate_dataset_plan ###########")
@@ -70,6 +76,22 @@ notes:
                 '-nz',  '0.0543', <<=== nomina z offset for some reazon is defferent than defoul one (maybe 
                 because different goopr?)
 and same for script_path = script_dir.joinpath('calibrate_gripper_range.py') [inside scripts_slam_pipline/05_run_cal,,,.py ]
+
+high shutter speed is very helpful/necesary to decrease motion bulr and thus improve slam performance
+
+output freame rate is actualy 10hz
+
+output units for x,y,z are meters
+
+
+
+TODO:
+
+fix output resolution and mask as it's not perfect for current gopro
+
+
+there is a better branch for SLAM that handels much better eges of the mask (used for masking out gripper during slam) https://github.com/Aczheng-cai/ORB_SLAM3_UMI
+
 
         
         24 start
