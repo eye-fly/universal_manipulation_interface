@@ -177,7 +177,7 @@ def main(input, repo_id, out_res, out_fov,
     use_video = True #TODO
     fps = 10 #TODO
     # task = "cup arrangment" #TODO
-    tasks = ["front/back","left/right", "down/up","around x ccw", "around z to left", "around y to down" ]
+    tasks = ["front/back","left/right", "down/up","around x ccw", "around z to left", "around y to down" ] #TODO
 
     check_repo_id(repo_id)
     
@@ -239,7 +239,7 @@ def main(input, repo_id, out_res, out_fov,
             last_pose = None
             for frame_i in range(frame_n):
                 frame = dict()
-                frame["task"] = tasks[plan_nr]
+                frame["task"] = tasks[plan_nr% len*(tasks)]
 
                 crr_pose = eef_pose[frame_i].astype('float32')
                 rot = crr_pose[3:]
