@@ -239,7 +239,7 @@ def main(input, repo_id, out_res, out_fov,
             last_pose = None
             for frame_i in range(frame_n):
                 frame = dict()
-                frame["task"] = tasks[plan_nr% len*(tasks)]
+                frame["task"] = tasks[plan_nr% len(tasks)]
 
                 crr_pose = eef_pose[frame_i].astype('float32')
                 rot = crr_pose[3:]
@@ -247,8 +247,8 @@ def main(input, repo_id, out_res, out_fov,
                 
                 # rot = rot * R.from_euler('xyz',[0,0,np.pi/2 ])
 
-                crr_pose[3:] = R.from_rotvec(rot).as_euler('yxz') #  TOCHECK: x,y axis are/where swiched compared to simulatio
-                crr_pose[3:][0], crr_pose[3:][1] = crr_pose[3:][1], crr_pose[3:][0]
+                euler_yxz = R.from_rotvec(rot).as_euler('yxz') #  TOCHECK: x,y axis are/where swiched compared to simulatio
+                crr_pose[3:] = [euler_yxz[1], euler_yxz[0], euler_yxz[2]]
 
                 # print(crr_pose[3:])
 
