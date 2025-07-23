@@ -55,7 +55,7 @@ in nomagic
   y  forward(-) bacward(+)
   z up(+)
 
-  roll [arund z] clockwise(-)
+  roll [arund y] clockwise(+)
   pitch [around x] clockwise(+)
   yaw [around z] clockwise(+)
 

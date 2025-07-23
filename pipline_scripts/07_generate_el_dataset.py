@@ -243,15 +243,15 @@ def main(input, repo_id, out_res, out_fov,
 
                 crr_pose = eef_pose[frame_i].astype('float32')
                 rot = crr_pose[3:]
-                crr_pose[3:] = R.from_rotvec(rot).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
+                crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 # print(crr_pose[3:])
 
                 # # fix order of axis
                 # # swap x with y axis
                 # crr_pose[0], crr_pose[1] = crr_pose[1], crr_pose[0]
-                # # reverse x, z
-                # crr_pose[0] = -crr_pose[0]
-                # crr_pose[2] = -crr_pose[2]
+                # # reverse x, y
+                crr_pose[0] = -crr_pose[0]
+                crr_pose[1] = -crr_pose[1]
 
                 # # reverse pitch and yaw
                 # frame["observation.state.pose"][4] = -frame["observation.state.pose"][4]
@@ -268,7 +268,7 @@ def main(input, repo_id, out_res, out_fov,
                     frame["action.pose"][:3] = crr_pose[:3] - last_pose[:3]
 
                     #totation form last_pose to current 
-                    delta_rot = R.from_euler( "xyz", crr_pose[3:]) * R.from_euler( "xyz", crr_pose[3:]).inv()
+                    delta_rot = R.from_euler( "xyz", crr_pose[3:]) * R.from_euler( "xyz", last_pose[3:]).inv()
                     frame["action.pose"][3:] = delta_rot.as_euler("xyz")
 
 
