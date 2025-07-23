@@ -247,8 +247,8 @@ def main(input, repo_id, out_res, out_fov,
                 
                 # rot = rot * R.from_euler('xyz',[0,0,np.pi/2 ])
 
-                euler_yxz = R.from_rotvec(rot).as_euler('yxz') #  TOCHECK: x,y axis are/where swiched compared to simulatio
-                crr_pose[3:] = [euler_yxz[1], euler_yxz[0], euler_yxz[2]]
+                euler_yxz = R.from_rotvec(rot).as_euler('yxz') 
+                crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[1], euler_yxz[0], euler_yxz[2]
 
                 # print(crr_pose[3:])
 
