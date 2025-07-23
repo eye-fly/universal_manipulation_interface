@@ -243,7 +243,10 @@ def main(input, repo_id, out_res, out_fov,
 
                 crr_pose = eef_pose[frame_i].astype('float32')
                 rot = crr_pose[3:]
-                crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
+                # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
+                
+                rot = rot * R.from_euler('xyz',[0,0,np.pi/2 ])
+                crr_pose[3:] = R.from_rotvec(rot).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulatio
                 # print(crr_pose[3:])
 
                 # # fix order of axis
@@ -395,24 +398,24 @@ def main(input, repo_id, out_res, out_fov,
                 # else:
                 #     assert False
                     
-    with tqdm(total=len(vid_args)) as pbar:
-        # one chunk per thread, therefore no synchronization needed
-        with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
-            futures = set()
-            for mp4_path, tasks in vid_args:
-                if len(futures) >= num_workers:
-                    # limit number of inflight tasks
-                    completed, futures = concurrent.futures.wait(futures, 
-                        return_when=concurrent.futures.FIRST_COMPLETED)
-                    pbar.update(len(completed))
+    # with tqdm(total=len(vid_args)) as pbar:
+    #     # one chunk per thread, therefore no synchronization needed
+    #     with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
+    #         futures = set()
+    #         for mp4_path, tasks in vid_args:
+    #             if len(futures) >= num_workers:
+    #                 # limit number of inflight tasks
+    #                 completed, futures = concurrent.futures.wait(futures, 
+    #                     return_when=concurrent.futures.FIRST_COMPLETED)
+    #                 pbar.update(len(completed))
 
-                futures.add(executor.submit(video_to_zarr, 
-                    out_replay_buffer, mp4_path, tasks))
+    #             futures.add(executor.submit(video_to_zarr, 
+    #                 out_replay_buffer, mp4_path, tasks))
 
-            completed, futures = concurrent.futures.wait(futures)
-            pbar.update(len(completed))
+    #         completed, futures = concurrent.futures.wait(futures)
+    #         pbar.update(len(completed))
 
-    print([x.result() for x in completed])
+    # print([x.result() for x in completed])
 
     # # dump to disk
     # print(f"Saving ReplayBuffer to {output}")
