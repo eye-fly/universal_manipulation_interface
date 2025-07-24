@@ -245,15 +245,15 @@ def main(input, repo_id, out_res, out_fov,
                 frame["task"] = tasks[plan_nr% len(tasks)]
 
                 crr_pose = eef_pose[frame_i].astype('float32')
-                rot = R.from_rotvec(crr_pose[3:]).as_
+                rot = R.from_rotvec(crr_pose[3:])
                 # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
                 change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
                 # change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ])
-                offset = R.from_euler([np.pi, 0, np.pi]).as_matrix
+                offset = R.from_euler([np.pi, 0, np.pi]).as_matrix()
 
 
-                rot_matrix =   offset @ inv(change_of_basis) @ rot.as_matrix @ change_of_basis
+                rot_matrix =   inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
                 rot = R.from_matrix(rot_matrix)
 
 
@@ -345,8 +345,8 @@ def main(input, repo_id, out_res, out_fov,
                     else:
                         assert n_cameras == len(cameras)
                     
- #                   process_whole_video(plan_episode, plan_nr) #FOR debug only
-                    futures.add(executor.submit(process_whole_video, plan_episode, plan_nr))
+                    process_whole_video(plan_episode, plan_nr) #FOR debug only
+ #                   futures.add(executor.submit(process_whole_video, plan_episode, plan_nr))
                     videos_used+=1
                     plan_nr +=1
                     # process_whole_video(plan_episode)#==========================
