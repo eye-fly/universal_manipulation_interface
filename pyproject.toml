@@ -12,8 +12,12 @@ dependencies = [
 	# "torch>=2.7.1",
 
 	#UMI dep
-	"scipy>=1.11",
+	"scipy>=1.15.2",
 	"imagecodecs==2023.9.18",
+
+
+	
+	"matplotlib"
 ]
 
 

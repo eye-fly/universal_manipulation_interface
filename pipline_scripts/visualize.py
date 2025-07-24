@@ -75,6 +75,7 @@ import torch.utils.data
 import tqdm
 
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from scipy.spatial.transform import Rotation as R
 
 
 class EpisodeSampler(torch.utils.data.Sampler):
@@ -99,6 +100,8 @@ def to_hwc_uint8_numpy(chw_float32_torch: torch.Tensor) -> np.ndarray:
     return hwc_uint8_numpy
 
 
+
+
 def visualize_dataset(
     dataset: LeRobotDataset,
     episode_index: int,
@@ -119,6 +122,8 @@ def visualize_dataset(
 
     logging.info("Loading dataloader")
     episode_sampler = EpisodeSampler(dataset, episode_index)
+
+    print(len(episode_sampler.frame_ids))
     dataloader = torch.utils.data.DataLoader(
         dataset,
         num_workers=num_workers,
@@ -146,9 +151,50 @@ def visualize_dataset(
 
     # print(dataset.meta.features)
     # print(dataset.stats)
+    lastPose = [0]*6
+    def pose_actions_update(ds_frame, current_pose):
+
+        move_values = ds_frame.numpy()
+        current_pose[:3] += move_values[:3]
+
+        move_rot = R.from_euler("xyz", move_values[3:])
+
+
+        # # -----------------
+        # euler_swap = move_rot.as_euler("xyz" )
+        # # euler_swap[0],euler_swap[1] = euler_swap[1],euler_swap[0]
+
+        # move_rot2 = R.from_euler("xyz", euler_swap)
+        # # -----------------
+
+        current_pose[3:] = (
+            move_rot * R.from_euler("xyz", current_pose[3:])
+        ).as_euler("xyz")
+
+        return current_pose, "pose"
+
+
+    def test(ds):
+        delta_pos = ds[0]["observation.state.pose"].numpy()
+        print("action 0: ", ds[0]["action.pose"])
+        nr = 0
+        for row in ds:
+            delta_pos,_ = pose_actions_update(row["action.pose"], delta_pos)
+            if not np.allclose(delta_pos, row["observation.state.pose"].numpy()):
+                print("nr = ",nr)
+                print(np.isclose(delta_pos, row["observation.state.pose"].numpy()))
+                print(delta_pos, " - ",row["observation.state.pose"].numpy())
+            assert np.allclose(delta_pos[:3], row["observation.state.pose"].numpy()[:3])
+
+            assert R.from_euler("xyz", delta_pos[3:]).approx_equal( R.from_euler("xyz", row["observation.state.pose"].numpy()[3:]) )
+            nr+=1
+
+    # test(dataset)
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
+        # print(batch)
         # iterate over the batch
         for i in range(len(batch["index"])):
+
             # rr.set_time_sequence("frame_index", batch["frame_index"][i].item())
             # rr.set_time_seconds("timestamp", batch["timestamp"][i].item())
             
@@ -167,12 +213,31 @@ def visualize_dataset(
             if "observation.state.pose" in batch:
                 for dim_idx, val in enumerate(batch["observation.state.pose"][i]):
                     name = dataset.meta.features["observation.state.pose"]["names"][dim_idx]
-                    rr.log(f"state/{name}", rr.Scalar(val.item()))
+
+                    
+                    # when to show delta/relative pos
+                    if False:
+                        lastPose[dim_idx] = lastPose[dim_idx] + val.item()
+                        print_val = lastPose[dim_idx]
+                    else:
+                        print_val = val.item()
+
+
+                    rr.log(f"state/{name}", rr.Scalar(print_val))
 
             # print(batch["observation.state.gripper"][i])
-            if "observation.state.gripper" in batch:
-                rr.log(f"state/gripper", rr.Scalar(batch["observation.state.gripper"][i].item()))
-        
+            if "action.gripper" in batch:
+                rr.log(f"state/gripper", rr.Scalar(batch["action.gripper"][i].item()))
+
+            if "action.pose" in batch:
+                 lastPose,_ = pose_actions_update(batch["action.pose"][i], lastPose)
+                 for dim_idx, val in enumerate(batch["action.pose"][i]):
+                    name = dataset.meta.features["action.pose"]["names"][dim_idx]
+
+
+                    print_val = lastPose[dim_idx]
+
+                    rr.log(f"action.pose/{name}", rr.Scalar(print_val))
 
             if "next.done" in batch:
                 rr.log("next.done", rr.Scalar(batch["next.done"][i].item()))
@@ -292,7 +357,7 @@ def main():
     tolerance_s = kwargs.pop("tolerance_s")
 
     logging.info("Loading dataset") #episodes=range(50),
-    dataset = LeRobotDataset(repo_id,  root=root, tolerance_s=tolerance_s)
+    dataset = LeRobotDataset(repo_id,  root=root, tolerance_s=tolerance_s, force_cache_sync=True)
 
     visualize_dataset(dataset, **vars(args))
 

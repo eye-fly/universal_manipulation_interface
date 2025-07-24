@@ -34,7 +34,9 @@ uv run pipline_scripts/visualize.py --repo-id eyefly2/test --episode-index 0
 
 
 
-
+=-------------------------
+bash run_docker_pipline.sh -n eyefly2/nomagic ~/Videos/nomagic/
+-=-----------------------------------
 
 in dataset:
     x,y,z, rol, pitch, yaw
@@ -58,6 +60,8 @@ in nomagic
   roll [arund y] clockwise(+)
   pitch [around x] clockwise(+)
   yaw [around z] clockwise(+)
+
+only left ot reverse direction of pitch
 
 notes:
 1. for slamp piline and current gripper:

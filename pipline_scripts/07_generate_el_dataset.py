@@ -13,6 +13,7 @@ import click
 import zarr
 import pickle
 import numpy as np
+from numpy.linalg import inv
 import cv2
 import av
 import multiprocessing
@@ -38,6 +39,8 @@ from src.universal_manipulation_interface.diffusion_policy.codecs.imagecodecs_nu
 from src.lbot.umi_zarr_format import from_raw_to_lerobot_format, umi_feats
 from lerobot.common.datasets.lerobot_dataset import CODEBASE_VERSION, LeRobotDataset
 from lerobot.common.datasets.push_dataset_to_hub.utils import check_repo_id
+
+
 register_codecs()
 
 
@@ -242,13 +245,18 @@ def main(input, repo_id, out_res, out_fov,
                 frame["task"] = tasks[plan_nr% len(tasks)]
 
                 crr_pose = eef_pose[frame_i].astype('float32')
-                rot = R.from_rotvec(crr_pose[3:])
+                rot = R.from_rotvec(crr_pose[3:]).as_
                 # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
-                rot =   R.from_euler('xyz',[0,0,np.pi/2 ]) * rot * R.from_euler('xyz',[0,0,-np.pi/2 ])
+                change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
+                # change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ])
 
-                euler_yxz = rot.as_euler('xyz') 
-                crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[0], euler_yxz[1], euler_yxz[2]
+                rot_matrix =   inv(change_of_basis) @ rot.as_matrix @ change_of_basis
+                rot = R.from_matrix(rot_matrix)
+
+
+                crr_pose[3:] = rot.as_euler('xyz') 
+                # crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[0], euler_yxz[1], euler_yxz[2]
 
                 # print(crr_pose[3:])
 
