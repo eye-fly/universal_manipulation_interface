@@ -245,24 +245,31 @@ def main(input, repo_id, out_res, out_fov,
                 frame["task"] = tasks[plan_nr% len(tasks)]
 
                 crr_pose = eef_pose[frame_i].astype('float32')
+
+                #revers dir of yaw
+ #               crr_pose[5] = -1.0*crr_pose[5]
+
                 rot = R.from_rotvec(crr_pose[3:])
+                offset_pich = R.from_euler("xyz",[ np.pi/2,0, 0])#
+                rot = offset_pich *rot
                 # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
-                change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
-                # change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ])
-                # offset = R.from_euler("xyz",[np.pi, 0, np.pi]).as_matrix()
+                change_of_basis =  np.matrix('0 1 0; 0 0 1 ; 1 0 0')
+               # change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
+                offset = R.from_euler("xyz",[np.pi, 0, np.pi]).as_matrix()
 
 
-                rot_matrix =   inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
+                rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
                 rot = R.from_matrix(rot_matrix)
 
-                # reverse direction of yaw
+
+                # reverse direction of all axis
                 rot_vector = rot.as_rotvec()
-                rot_vector[2] = -1.0*rot_vector[2]
-                rot = R.from_rotvec(rot_vector)
+                rot_vector = -1.0*rot_vector
+                rot_rev = R.from_rotvec(rot_vector)
 
 
-                crr_pose[3:] = rot.as_euler('xyz') 
+                crr_pose[3:] = rot_rev.as_euler('xyz') 
                 # crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[0], euler_yxz[1], euler_yxz[2]
 
                 # print(crr_pose[3:])
