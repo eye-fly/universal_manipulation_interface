@@ -242,13 +242,13 @@ def main(input, repo_id, out_res, out_fov,
                 frame["task"] = tasks[plan_nr% len(tasks)]
 
                 crr_pose = eef_pose[frame_i].astype('float32')
-                rot = crr_pose[3:]
+                rot = R.from_rotvec(crr_pose[3:])
                 # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
-                # rot = rot * R.from_euler('xyz',[0,0,np.pi/2 ])
+                rot =   R.from_euler('xyz',[0,0,np.pi/2 ]) * rot * R.from_euler('xyz',[0,0,-np.pi/2 ])
 
-                euler_yxz = R.from_rotvec(rot).as_euler('yxz') 
-                crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[1], euler_yxz[0], euler_yxz[2]
+                euler_yxz = rot.as_euler('xyz') 
+                crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[0], euler_yxz[1], euler_yxz[2]
 
                 # print(crr_pose[3:])
 
@@ -310,6 +310,7 @@ def main(input, repo_id, out_res, out_fov,
         
         
         plan_nr = 0
+        print("starting asymc:")
         with tqdm(total=len(plan)) as pbar:
             # one chunk per thread, therefore no synchronization needed
             with concurrent.futures.ThreadPoolExecutor(max_workers=num_workers) as executor:
