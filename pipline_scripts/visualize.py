@@ -73,7 +73,7 @@ import rerun as rr
 import torch
 import torch.utils.data
 import tqdm
-
+import math
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from scipy.spatial.transform import Rotation as R
 
@@ -99,6 +99,71 @@ def to_hwc_uint8_numpy(chw_float32_torch: torch.Tensor) -> np.ndarray:
     hwc_uint8_numpy = (chw_float32_torch * 255).type(torch.uint8).permute(1, 2, 0).numpy()
     return hwc_uint8_numpy
 
+
+home_pose = [0,0,0,-2.70767309, -0.67766038, -2.99060844]
+TRAJECTORIES_D = [
+    # [[0,0,0 ,0,0,0], [0.3,0,0 ,0,0,0], [-0.6,0,0 ,0,0,0], [0.3,0,0 ,0,0,0] ],
+    # [[0,0.1,0 ,0,0,0], [0,-0.3,0 ,0,0,0],[0,0.2,0 ,0,0,0] ],
+    # [[0,-0.2,0 ,0,0,0], [0,0,0.3 ,0,0,0], [0,0,-0.5 ,0,0,0], [0,0,0.2 ,0,0,0],[0,0.2,0 ,0,0,0], ],
+
+    [[0,0,0 ,0,0,0],[0,0,0 ,np.pi/4,0,0], [0,0,0 ,-np.pi/2,0,0],[0,0,0 ,np.pi/4,0,0], ],
+    [[0,0,0 ,0,np.pi/4,0], [0,0,0 ,0,-np.pi/2,0],[0,0,0 ,0,np.pi/4,0]],
+    [[0,0,0 ,0,0,np.pi/4], [0,0,0 ,0,0,-np.pi/2],[0,0,0 ,0,0,np.pi/4]],
+
+]
+
+
+def get_minimum_angle_diff(rot_a, rot_b):
+    vect = [[1,0,0],[0,1,0], [0,0,1]]
+
+    vect_a = rot_a.apply(vect)
+    print(vect, " -- ", vect_a)
+    vect_b = rot_b.apply(vect)
+    print(vect, " -- ", vect_b)
+    # print("="*100)
+    
+
+
+    rot_diff, rssd = R.align_vectors(vect_a, vect_b)
+    assert rssd < 0.01
+
+    return rot_diff.magnitude()
+
+def pose_actions_update(move_values, current_pose):
+        # move_values = ds_frame["action.pose"].numpy()
+    # current_pose[:3] += move_values[:3]# /2 # temporary to limit movment
+    # print( move_values[3:])
+    # print( current_pose[3:])
+    current_pose[3:] = (
+        R.from_euler("xyz", move_values[3:]) * R.from_euler("xyz", current_pose[3:]) 
+    ).as_euler("xyz")
+    # print(move_values[3:])
+
+    return current_pose, "pose"
+
+orentations = []
+def find_min_angle(traj, robot_move_list):
+    pos = home_pose.copy()
+
+    print(robot_move_list)
+    print(home_pose)
+    robot_ground_truth, _ = pose_actions_update(robot_move_list, home_pose.copy())
+    robot_ground_truth = R.from_euler("xyz", robot_ground_truth[3:])
+    print(robot_ground_truth.as_euler("xyz"))
+    print("+"*100)
+    min_amp = math.inf
+    min_amp_idx = -1
+
+    for i,row in enumerate(traj):
+        pos,_ = pose_actions_update(row["action.pose"].numpy(), pos)
+
+        crr_rot = R.from_euler("xyz", pos[3:])
+        amp = get_minimum_angle_diff(robot_ground_truth, crr_rot)
+
+        if amp < min_amp:
+            min_amp = amp
+            min_amp_idx = i
+    print(min_amp_idx ,"->", min_amp , "  at timestamp:") # traj["timestamp"][min_amp_idx]
 
 
 
@@ -152,6 +217,7 @@ def visualize_dataset(
     # print(dataset.meta.features)
     # print(dataset.stats)
     lastPose = [0]*6
+    last_robot_rec_pose = home_pose.copy()
     def pose_actions_update(ds_frame, current_pose):
 
         move_values = ds_frame.numpy()
@@ -190,6 +256,10 @@ def visualize_dataset(
             nr+=1
 
     # test(dataset)
+    # ep1 -> traj 0
+    # ep 2 -> traj 1
+    # ep 3 -> traj 2
+    # find_min_angle(dataset,TRAJECTORIES_D[0][1])
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         # print(batch)
         # iterate over the batch
@@ -231,13 +301,18 @@ def visualize_dataset(
 
             if "action.pose" in batch:
                  lastPose,_ = pose_actions_update(batch["action.pose"][i], lastPose)
+                 last_robot_rec_pose ,_ = pose_actions_update(batch["action.pose"][i], last_robot_rec_pose)
+
                  for dim_idx, val in enumerate(batch["action.pose"][i]):
                     name = dataset.meta.features["action.pose"]["names"][dim_idx]
 
 
                     print_val = lastPose[dim_idx]
 
+                    print_robot_val = last_robot_rec_pose[dim_idx]
+
                     rr.log(f"action.pose/{name}", rr.Scalar(print_val))
+                    rr.log(f"robot.pose/{name}", rr.Scalar(print_robot_val))
 
             if "next.done" in batch:
                 rr.log("next.done", rr.Scalar(batch["next.done"][i].item()))

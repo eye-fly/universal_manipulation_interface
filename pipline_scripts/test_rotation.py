@@ -1,0 +1,291 @@
+#!/usr/bin/env python
+
+# Copyright 2024 The HuggingFace Inc. team. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+""" Visualize data of **all** frames of any episode of a dataset of type LeRobotDataset.
+
+Note: The last frame of the episode doesn't always correspond to a final state.
+That's because our datasets are composed of transition from state to state up to
+the antepenultimate state associated to the ultimate action to arrive in the final state.
+However, there might not be a transition from a final state to another state.
+
+Note: This script aims to visualize the data used to train the neural networks.
+~What you see is what you get~. When visualizing image modality, it is often expected to observe
+lossy compression artifacts since these images have been decoded from compressed mp4 videos to
+save disk space. The compression factor applied has been tuned to not affect success rate.
+
+Examples:
+
+- Visualize data stored on a local machine:
+```
+local$ python -m lerobot.scripts.visualize_dataset \
+    --repo-id lerobot/pusht \
+    --episode-index 0
+```
+
+- Visualize data stored on a distant machine with a local viewer:
+```
+distant$ python -m lerobot.scripts.visualize_dataset \
+    --repo-id lerobot/pusht \
+    --episode-index 0 \
+    --save 1 \
+    --output-dir path/to/directory
+
+local$ scp distant:path/to/directory/lerobot_pusht_episode_0.rrd .
+local$ rerun lerobot_pusht_episode_0.rrd
+```
+
+- Visualize data stored on a distant machine through streaming:
+(You need to forward the websocket port to the distant machine, with
+`ssh -L 9087:localhost:9087 username@remote-host`)
+```
+distant$ python -m lerobot.scripts.visualize_dataset \
+    --repo-id lerobot/pusht \
+    --episode-index 0 \
+    --mode distant \
+    --ws-port 9087
+
+local$ rerun ws://localhost:9087
+```
+
+"""
+
+import argparse
+import gc
+import logging
+import time
+from pathlib import Path
+from typing import Iterator
+
+import numpy as np
+import rerun as rr
+import torch
+import torch.utils.data
+import tqdm
+
+from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
+from scipy.spatial.transform import Rotation as R
+import matplotlib.pyplot as plt
+
+def plot_rotated_axes(ax, r, name=None, offset=(0, 0, 0), scale=1):
+
+    colors = ("#FF6666", "#005533", "#1199EE")  # Colorblind-safe RGB
+
+    loc = np.array([offset, offset])
+
+    for i, (axis, c) in enumerate(zip((ax.xaxis, ax.yaxis, ax.zaxis),
+
+                                      colors)):
+
+        axlabel = axis.axis_name
+
+        axis.set_label_text(axlabel)
+
+        axis.label.set_color(c)
+
+        axis.line.set_color(c)
+
+        axis.set_tick_params(colors=c)
+
+        line = np.zeros((2, 3))
+
+        line[1, i] = scale
+
+        line_rot = r.apply(line)
+
+        line_plot = line_rot + loc
+
+        ax.plot(line_plot[:, 0], line_plot[:, 1], line_plot[:, 2], c)
+
+        text_loc = line[1]*1.2
+
+        text_loc_rot = r.apply(text_loc)
+
+        text_plot = text_loc_rot + loc[0]
+
+        ax.text(*text_plot, axlabel.upper(), color=c,
+
+                va="center", ha="center")
+
+    ax.text(*offset, name, color="k", va="center", ha="center",
+
+            bbox={"fc": "w", "alpha": 0.8, "boxstyle": "circle"})
+
+
+class EpisodeSampler(torch.utils.data.Sampler):
+    def __init__(self, dataset: LeRobotDataset, episode_index: int):
+        from_idx = dataset.episode_data_index["from"][episode_index].item()
+        to_idx = dataset.episode_data_index["to"][episode_index].item()
+        self.frame_ids = range(from_idx, to_idx)
+
+    def __iter__(self) -> Iterator:
+        return iter(self.frame_ids)
+
+    def __len__(self) -> int:
+        return len(self.frame_ids)
+
+
+def to_hwc_uint8_numpy(chw_float32_torch: torch.Tensor) -> np.ndarray:
+    assert chw_float32_torch.dtype == torch.float32
+    assert chw_float32_torch.ndim == 3
+    c, h, w = chw_float32_torch.shape
+    assert c < h and c < w, f"expect channel first images, but instead {chw_float32_torch.shape}"
+    hwc_uint8_numpy = (chw_float32_torch * 255).type(torch.uint8).permute(1, 2, 0).numpy()
+    return hwc_uint8_numpy
+
+
+def pnt(initial, i,j, debug = False):
+    names = ["roll", "pich",  "yaw"]
+    rot_pich = R.from_euler('xyz',[0, (np.pi/2)*(1.0*i/100),0 ])
+    rot_roll = R.from_euler('xyz',[ (np.pi/2)*(1.0*j/100),0 ,0 ])
+
+    rot = initial* rot_roll *rot_pich
+
+    rot1 = R.from_euler('xyz',[0,0,np.pi/2 ])*rot* R.from_euler('xyz',[0,0,-np.pi/2 ])
+    
+    pose = rot1.as_euler("xyz")
+
+
+    rot_vector = rot1.as_rotvec()
+    if debug:
+        print(rot_vector)
+    rot_vector[2] = -1.0*rot_vector[2]
+    if debug:
+        print("-", rot_vector)
+    rot_rev = R.from_rotvec(rot_vector)
+    poserev = rot_rev.as_euler("xyz")
+    # pose2[0], pose2[1] = pose2[1], pose2[0]
+
+
+    # show_plots(R.from_euler("xyz",pose2 ))
+    for dim in range(3):
+        rr.log(f"normal/{names[dim]}", rr.Scalar(rot.as_euler("xyz")[dim]))
+        rr.log(f"state/{names[dim]}", rr.Scalar(pose[dim]))
+        rr.log(f"state1rev/{names[dim]}", rr.Scalar(poserev[dim]))
+
+
+def visualize_dataset(
+) -> Path | None:
+    mode ="local"
+    spawn_local_viewer = mode 
+    rr.init(f"episode_", spawn=spawn_local_viewer)
+
+    # Manually call python garbage collector after `rr.init` to avoid hanging in a blocking flush
+    # when iterating on a dataloader with `num_workers` > 0
+    # TODO(rcadene): remove `gc.collect` when rerun version 0.16 is out, which includes a fix
+    gc.collect()
+
+    if mode == "distant":
+        rr.serve(open_browser=False, web_port=web_port, ws_port=ws_port)
+
+    logging.info("Logging to Rerun")
+
+    # print(dataset.meta.features)
+    # print(dataset.stats)
+    lastPose = [0]*6
+    
+    initial = R.from_euler('xyz',[0.2,0.2 ,0.2 ])
+    for i in range(100):
+        pnt(R.identity() ,i,0,True)
+        # time.sleep(0.1)
+    for j in range(100):
+        pnt(R.identity(),0,j)
+
+    for i in range(100):
+        pnt(initial,i,0)
+        # time.sleep(0.1)
+        
+    for j in range(100):
+        pnt(initial,0,j)
+    
+
+
+
+
+    # elif mode == "distant":
+    #     # stop the process from exiting since it is serving the websocket connection
+    #     try:
+    #         while True:
+    #             time.sleep(1)
+    #     except KeyboardInterrupt:
+    #         print("Ctrl-C received. Exiting.")
+
+
+ax = plt.figure().add_subplot(projection="3d", proj_type="ortho")
+ax.set(xlim=(-1.25, 5.25), ylim=(-1.25, 1.25), zlim=(-1.25, 1.25))
+
+ax.set(xticks=range(-1, 8), yticks=[-1, 0, 1], zticks=[-1, 0, 1])
+
+ax.set_aspect("equal", adjustable="box")
+
+ax.figure.set_size_inches(6, 5)
+_ = ax.annotate(
+
+    "r0: Identity Rotation\n"
+
+    "r1: Intrinsic Euler Rotation (ZYX)\n",
+
+
+    xy=(0.6, 0.7), xycoords="axes fraction", ha="left"
+
+)
+
+def show_plots(r1):
+    r0 = R.identity()
+    
+
+    plot_rotated_axes(ax, r0, name="r0", offset=(0, 0, 0))
+
+    plot_rotated_axes(ax, r1, name="r1", offset=(3, 0, 0))
+
+
+
+
+
+
+    plt.tight_layout()
+    plt.show(block = True)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    args = parser.parse_args()
+    kwargs = vars(args)
+    # repo_id = kwargs.pop("repo_id")
+    # root = kwargs.pop("root")
+    # tolerance_s = kwargs.pop("tolerance_s")
+
+    # logging.info("Loading dataset") #episodes=range(50),
+    # dataset = LeRobotDataset(repo_id,  root=root, tolerance_s=tolerance_s)
+    # eule = [0.2, 1.3, -1.4]
+    eule = [-1.4, 1.3, 0.2]
+    r = R.from_euler("xyz", eule)
+    print(eule, r.as_quat())
+
+    # r.approx_equal()
+
+    visualize_dataset(**vars(args))
+    # print(R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix())
+
+    rt = R.from_euler('xyz',[0,np.pi*5/6,0 ])*R.from_euler('xyz',[np.pi,0, np.pi ]) 
+    print(rt.as_euler("xyz"))
+
+
+    
+
+   
+
+if __name__ == "__main__":
+    main()

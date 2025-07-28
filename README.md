@@ -61,7 +61,7 @@ in nomagic
   pitch [around x] clockwise(+)
   yaw [around z] clockwise(+)
 
-only left ot reverse direction of pitch
+only left ot reverse direction of yaw
 
 notes:
 1. for slamp piline and current gripper:
@@ -78,6 +78,8 @@ and same for script_path = script_dir.joinpath('calibrate_gripper_range.py') [in
         
         24 start
 
+
+TCP(tool center point) in remote,, how to set?
 
 
 

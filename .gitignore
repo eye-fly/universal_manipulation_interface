@@ -15,5 +15,6 @@ videos/*
 viedos2/*
 # Virtual environments
 .venv
+uv.lock
 
 .env
