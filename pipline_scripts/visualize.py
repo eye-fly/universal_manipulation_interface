@@ -135,8 +135,8 @@ def pose_actions_update(move_values, current_pose):
     # print( move_values[3:])
     # print( current_pose[3:])
     current_pose[3:] = (
-        R.from_euler("xyz", move_values[3:]) * R.from_euler("xyz", current_pose[3:]) 
-    ).as_euler("xyz")
+        R.from_euler("yxz", move_values[3:]) * R.from_euler("yxz", current_pose[3:]) 
+    ).as_euler("yxz")
     # print(move_values[3:])
 
     return current_pose, "pose"

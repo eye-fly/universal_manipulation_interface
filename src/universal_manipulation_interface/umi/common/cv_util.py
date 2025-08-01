@@ -268,7 +268,7 @@ def get_mirror_canonical_polygon():
         [540, 1700],
         [680, 1450],
         [590, 1070],
-        [290, 1130],
+        [110, 1170], #[290, 1130],
         [290, 1770],
         [550, 1770]
     ]
@@ -302,8 +302,8 @@ def get_gripper_canonical_polygon():
     left_pts = [
         [1352, 1730],
         [1100, 1700],
-        [650, 1500],
-        [0, 1350],
+        [650, 1600], #[650, 1500],
+        [0, 1550], #[0, 1350],
         [0, 2028],
         [1352, 2704]
     ]
@@ -314,7 +314,7 @@ def get_gripper_canonical_polygon():
     coords = np.stack([left_coords, right_coords])
     return coords
 
-def get_finger_canonical_polygon(height=0.37, top_width=0.25, bottom_width=1.4):
+def get_finger_canonical_polygon(height=0.34, top_width=0.25, bottom_width=1.6):
     # image size
     resolution = [2028, 2704]
     img_h, img_w = resolution
@@ -324,6 +324,7 @@ def get_finger_canonical_polygon(height=0.37, top_width=0.25, bottom_width=1.4):
     bottom_y = 1.
     width = img_w / img_h
     middle_x = width / 2.
+    middle_x -=25.0/img_w
     top_left_x = middle_x - top_width / 2.
     top_right_x = middle_x + top_width / 2.
     bottom_left_x = middle_x - bottom_width / 2.

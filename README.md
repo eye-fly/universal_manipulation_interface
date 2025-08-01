@@ -63,6 +63,12 @@ in nomagic
 
 only left ot reverse direction of yaw
 
+
+
+dataset with "Working [after changing xyz to yxz]" -- eyefly2/robot_basis || changing using change of basis(pi rot azround z)
+
+"compatible" with current but need reverse of direction on pitch --  eyefly2/robot_unchanged_swaped_roll || changing using rotvect
+
 notes:
 1. for slamp piline and current gripper:
     print("############# 06_generate_dataset_plan ###########")

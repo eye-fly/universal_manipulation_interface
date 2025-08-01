@@ -144,35 +144,91 @@ def to_hwc_uint8_numpy(chw_float32_torch: torch.Tensor) -> np.ndarray:
     hwc_uint8_numpy = (chw_float32_torch * 255).type(torch.uint8).permute(1, 2, 0).numpy()
     return hwc_uint8_numpy
 
+def change_cor_system(r):
+    rvec = r.as_rotvec()
+    rvec[0], rvec[1],rvec[2] = rvec[0], -rvec[1], rvec[2]
+    return R.from_rotvec(rvec)
+    # eu = r.as_euler("xyz")
+    # eu[0], eu[1],eu[2] = eu[0], eu[1], eu[2]
+    # return R.from_euler("xyz", eu)
 
+def inverse_special(r):
+    eu = r.as_euler("xyz")
+    # eu = -1*eu
+    eu[0], eu[1],eu[2] = eu[0], -eu[1], eu[2]
+    return R.from_euler("xyz", eu)
+
+
+rot1_last = None
+rot1_crr = R.from_euler('xyz',[0, 0,0 ])
+
+rot2_last = None
+rot2_crr = R.from_euler('xyz',[0, 0,0 ])
+rot2_sim = None
 def pnt(initial, i,j, debug = False):
     names = ["roll", "pich",  "yaw"]
-    rot_pich = R.from_euler('xyz',[0, (np.pi/2)*(1.0*i/100),0 ])
-    rot_roll = R.from_euler('xyz',[ (np.pi/2)*(1.0*j/100),0 ,0 ])
+    rot_pich = R.from_euler('xyz',[0, -(np.pi/2)*(1.0*i/100),0 ])
+    pos_rot_pich = R.from_euler('xyz',[0, (np.pi/2)*(1.0*i/100),0 ])
+    rot_roll = R.from_euler('xyz',[ (np.pi/2)*(1.0*j/100),-(np.pi/2)*(0.5*j/100) ,0 ])
 
-    rot = initial* rot_roll *rot_pich
+    rot =  rot_roll *rot_pich* initial
+# =============================================
 
-    rot1 = R.from_euler('xyz',[0,0,np.pi/2 ])*rot* R.from_euler('xyz',[0,0,-np.pi/2 ])
+    assert pos_rot_pich.approx_equal(rot_pich.inv())
+
+    global rot1_last,rot1_crr, rot2_last, rot2_crr, rot2_sim
+
+    rot1 = rot
+    if rot1_last is None:
+        rot1_last = initial
+    delta1 = rot1* rot1_last.inv()
+    rot1_last = rot1
+
+    rot1_crr = ( delta1*rot1_crr )
+    pose = rot1_crr.as_euler("xyz")
+
+
+    rot2 = ((rot_roll) *rot_pich* initial)
+
+    if rot2_last is None:
+        rot2_last = (initial)
+        rot2_sim = R.from_euler('xyz',[0, 0,0 ])
+    delta2 = (rot2)* (rot2_last).inv()
+    delta2 = (delta2)
+    rot2_last = rot2
+
+    rot2_sim_last = (rot2_sim)
+    rot2_sim = (delta2*rot2_sim)
+    delta2_sim = inverse_special(rot2_sim) * inverse_special(rot2_sim_last).inv()
     
-    pose = rot1.as_euler("xyz")
 
+    rot2_crr = ( delta2_sim*rot2_crr )
 
-    rot_vector = rot1.as_rotvec()
-    if debug:
-        print(rot_vector)
-    rot_vector[2] = -1.0*rot_vector[2]
-    if debug:
-        print("-", rot_vector)
-    rot_rev = R.from_rotvec(rot_vector)
-    poserev = rot_rev.as_euler("xyz")
+    print(delta1.as_euler("xyz"), delta1.as_rotvec())    
+    # assert change_cor_system(delta2).approx_equal(delta1)
+    # assert change_cor_system(rot2_crr).approx_equal(rot1_crr)
+    # print("="*100)
+    # print(rot2_crr.as_rotvec())
+    rotv_swap = (rot2_crr).as_euler("xyz")
+    # print(rot2_crr.as_rotvec())
+
+    
+    # rot_vector = rot.as_rotvec()
+    # if debug:
+    #     print(rot_vector)
+    # rot_vector[0],rot_vector[1] = rot_vector[1],rot_vector[0]
+    # if debug:
+    #     print("-", rot_vector)
+    # rot_rev = R.from_rotvec(rot_vector)
+    # rotv_swap = rot_rev.as_euler("xyz")
     # pose2[0], pose2[1] = pose2[1], pose2[0]
 
 
     # show_plots(R.from_euler("xyz",pose2 ))
     for dim in range(3):
-        rr.log(f"normal/{names[dim]}", rr.Scalar(rot.as_euler("xyz")[dim]))
+        # rr.log(f"normal/{names[dim]}", rr.Scalar(rot.as_euler("xyz")[dim]))
         rr.log(f"state/{names[dim]}", rr.Scalar(pose[dim]))
-        rr.log(f"state1rev/{names[dim]}", rr.Scalar(poserev[dim]))
+        rr.log(f"rotV_swp/{names[dim]}", rr.Scalar(rotv_swap[dim]))
 
 
 def visualize_dataset(
@@ -196,16 +252,21 @@ def visualize_dataset(
     lastPose = [0]*6
     
     initial = R.from_euler('xyz',[0.2,0.2 ,0.2 ])
-    for i in range(100):
-        pnt(R.identity() ,i,0,True)
-        # time.sleep(0.1)
-    for j in range(100):
-        pnt(R.identity(),0,j)
-
+    # for i in range(100):
+    #     pnt(R.identity() ,i,0,True)
+    #     # time.sleep(0.1)
+    # for j in range(100):
+    #     pnt(R.identity(),0,j)
+    global rot1_last,rot1_crr, rot2_last, rot2_crr
     for i in range(100):
         pnt(initial,i,0)
-        # time.sleep(0.1)
-        
+            # time.sleep(0.1)
+    
+    rot1_last = None
+    rot1_crr = R.from_euler('xyz',[0, 0,0 ])
+
+    rot2_last = None
+    rot2_crr = R.from_euler('xyz',[0, 0,0 ])
     for j in range(100):
         pnt(initial,0,j)
     
@@ -289,3 +350,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

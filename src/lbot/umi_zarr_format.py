@@ -147,7 +147,7 @@ def load_from_raw(
     return data_dict
 
 
-def umi_feats(viedo_h, video_w):
+def umi_feats(video_w,viedo_h):
     return {
             "observation.state.pose": {
                 "dtype": "float32",
