@@ -40,7 +40,6 @@ from src.lbot.umi_zarr_format import from_raw_to_lerobot_format, umi_feats
 from lerobot.common.datasets.lerobot_dataset import CODEBASE_VERSION, LeRobotDataset
 from lerobot.common.datasets.push_dataset_to_hub.utils import check_repo_id
 
-
 register_codecs()
 
 
@@ -50,7 +49,7 @@ register_codecs()
 @click.command()
 @click.argument('input', nargs=-1)
 @click.option('-rp', '--repo_id', required=True, help='hf dataset name')
-@click.option('-or', '--out_res', type=str, default='224,224')
+@click.option('-or', '--out_res', type=str, default='224,224')#298
 @click.option('-of', '--out_fov', type=float, default=None)
 # @click.option('-cl', '--compression_level', type=int, default=99)
 @click.option('-nm', '--no_mirror', is_flag=True, default=False, help="Disable mirror observation by masking them out")
@@ -189,9 +188,8 @@ def main(input, repo_id, out_res, out_fov,
     dataset = LeRobotDataset.create(
         repo_id=repo_id,
         fps = fps,
-        features=umi_feats(224,224), #TODO
+        features=umi_feats(*out_res),
         use_videos=use_video,
-
     )
     
     def euler_fix_delta(delta):
@@ -200,6 +198,12 @@ def main(input, repo_id, out_res, out_fov,
         return delta
 
     mutex = threading.Lock()
+
+    def handedness_cor_system(r: R):
+        M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
+        mr = M @ r.as_matrix() @ M
+        return R.from_matrix(mr)
+
     def process_whole_video(plan_episode, plan_nr):
         grippers = plan_episode['grippers']
         cameras = plan_episode['cameras']
@@ -256,20 +260,14 @@ def main(input, repo_id, out_res, out_fov,
 
                 # # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
-            #     change_of_basis =  np.matrix('0 1 0; 0 0 1 ; 1 0 0')
+                change_of_basis =  np.matrix('0 1 0; 0 0 1 ; 1 0 0')
             #    # change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
             #     offset = R.from_euler("xyz",[np.pi, 0, np.pi]).as_matrix()
+                rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
+                rot = R.from_matrix(rot_matrix)
 
-
-            #     rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
-            #     rot = R.from_matrix(rot_matrix)
-
-
-            #     # reverse direction of all axis
-            #     rot_vector = rot.as_rotvec()
-            #     rot_vector = -1.0*rot_vector
-            #     rot_rev = R.from_rotvec(rot_vector)
-
+                rot = handedness_cor_system(rot)
+                
 
                 crr_pose[3:] = rot.as_euler('xyz') #rot_rev.as_euler('xyz') 
                 # crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[0], euler_yxz[1], euler_yxz[2]
@@ -359,7 +357,8 @@ def main(input, repo_id, out_res, out_fov,
                     else:
                         assert n_cameras == len(cameras)
                     
-                    # process_whole_video(plan_episode, plan_nr) #FOR debug only
+                    process_whole_video(plan_episode, plan_nr) #FOR debug only
+                    break
                     futures.add(executor.submit(process_whole_video, plan_episode, plan_nr))
                     videos_used+=1
                     plan_nr +=1

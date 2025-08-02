@@ -158,6 +158,16 @@ def inverse_special(r):
     eu[0], eu[1],eu[2] = eu[0], -eu[1], eu[2]
     return R.from_euler("xyz", eu)
 
+def bad_change_cor_system(r: R, inverse=False):
+    # Mirror across Y-axis (e.g., left-handed system)
+    M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
+    if inverse:
+        # Undo the coordinate change
+        mr = M @ r.as_matrix() @ M
+    else:
+        # Apply the coordinate change
+        mr = M @ r.as_matrix() @ M
+    return R.from_matrix(mr)
 
 rot1_last = None
 rot1_crr = R.from_euler('xyz',[0, 0,0 ])
@@ -188,21 +198,21 @@ def pnt(initial, i,j, debug = False):
     pose = rot1_crr.as_euler("xyz")
 
 
-    rot2 = ((rot_roll) *rot_pich* initial)
+    rot2 = bad_change_cor_system(rot)
 
     if rot2_last is None:
-        rot2_last = (initial)
-        rot2_sim = R.from_euler('xyz',[0, 0,0 ])
-    delta2 = (rot2)* (rot2_last).inv()
+        rot2_last = bad_change_cor_system(initial)
+        # rot2_sim = R.from_euler('xyz',[0, 0,0 ])
+    delta2 = (rot2) * (rot2_last).inv()
     delta2 = (delta2)
     rot2_last = rot2
 
-    rot2_sim_last = (rot2_sim)
-    rot2_sim = (delta2*rot2_sim)
-    delta2_sim = inverse_special(rot2_sim) * inverse_special(rot2_sim_last).inv()
+    # rot2_sim_last = (rot2_sim)
+    # rot2_sim = (delta2*rot2_sim)
+    # delta2_sim = inverse_special(rot2_sim) * inverse_special(rot2_sim_last).inv()
     
 
-    rot2_crr = ( delta2_sim*rot2_crr )
+    rot2_crr = ( delta2*rot2_crr )
 
     print(delta1.as_euler("xyz"), delta1.as_rotvec())    
     # assert change_cor_system(delta2).approx_equal(delta1)
