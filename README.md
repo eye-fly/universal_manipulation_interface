@@ -1,3 +1,8 @@
+TOD0: swich to a gopro12 banch for  submodule :
+  git config -f .gitmodules submodule.src/universal_manipulation_interface.branch gopro12
+  git submodule update --remote
+
+
 install
 sudo apt install -y libosmesa6-dev libgl1-mesa-glx libglfw3 patchelf
 sudo apt-get install ffmpeg
@@ -68,6 +73,11 @@ only left ot reverse direction of yaw
 dataset with "Working [after changing xyz to yxz]" -- eyefly2/robot_basis || changing using change of basis(pi rot azround z)
 
 "compatible" with current but need reverse of direction on pitch --  eyefly2/robot_unchanged_swaped_roll || changing using rotvect
+
+
+robot_interface cantron and recording data at a same time
+
+
 
 notes:
 1. for slamp piline and current gripper:
