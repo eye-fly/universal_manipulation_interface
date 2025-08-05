@@ -192,11 +192,6 @@ def main(input, repo_id, out_res, out_fov,
         use_videos=use_video,
     )
     
-    def euler_fix_delta(delta):
-        # delta = euler2 - euler1
-        delta = (delta + np.pi) % (2 * np.pi) - np.pi
-        return delta
-
     mutex = threading.Lock()
 
     def handedness_cor_system(r: R):
