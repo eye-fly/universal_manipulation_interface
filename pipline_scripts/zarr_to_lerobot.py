@@ -1,3 +1,10 @@
+import sys
+import os
+
+ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
+sys.path.append(ROOT_DIR)
+os.chdir(ROOT_DIR)
+
 import click
 import zarr
 from pathlib import Path
@@ -31,14 +38,18 @@ def handedness_cor_system(r: R):
 
 fps = 10
 
+import numcodecs
+from imagecodecs.numcodecs import Jpegxl
+numcodecs.register_codec(Jpegxl)
+
 def load_zarr(zarr_path, dataset):
     zarr_data = zarr.open(zarr_path, mode="r")
 
     eff_pos = torch.from_numpy(zarr_data["data/robot0_eef_pos"][:])
     eff_rot_axis_angle = torch.from_numpy(zarr_data["data/robot0_eef_rot_axis_angle"][:])
-    states_pos = torch.cat([eff_pos, eff_rot_axis_angle], dim=1)
+    states_pos = torch.cat([eff_pos, eff_rot_axis_angle], dim=1).numpy()
 
-    gripper_width = torch.from_numpy(zarr_data["data/robot0_gripper_width"][:])
+    gripper_width = (zarr_data["data/robot0_gripper_width"][:])
 
     episode_ends = zarr_data["meta/episode_ends"][:]
     num_episodes = episode_ends.shape[0]
@@ -77,7 +88,7 @@ def load_zarr(zarr_path, dataset):
             crr_pose[1] = -crr_pose[1]
 
             frame["observation.state.pose"]  = crr_pose
-            frame["action.gripper"] = np.array([gripper_width[frame_idx]], dtype='float32')
+            frame["action.gripper"] = gripper_width[frame_idx]
             
             frame["action.pose"] = np.zeros_like(crr_pose)
             if not (last_pose is None):
@@ -97,12 +108,15 @@ def load_zarr(zarr_path, dataset):
             dataset.add_frame(frame)
             last_pose = crr_pose
         dataset.save_episode()
+        break
+    dataset.push_to_hub(private=True)
 
 
 @click.command()
-@click.argument('input_path', nargs=-1)
+@click.argument('input', nargs=-1)
 @click.option('-rp', '--repo_id', required=True, help='hf dataset name')
-def main(input_path, repo_id):
+@click.option('-p', '--zarr_path', required=True, help='hf dataset name')
+def main(input, repo_id, zarr_path):
     use_video = True #TODO
     out_res = (224,224)
 
@@ -117,4 +131,8 @@ def main(input_path, repo_id):
         use_videos=use_video,
     )
 
-    load_zarr(input_path,dataset )
+    load_zarr(zarr_path,dataset )
+
+if __name__ == "__main__":
+    main()
+

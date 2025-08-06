@@ -352,8 +352,7 @@ def main(input, repo_id, out_res, out_fov,
                     else:
                         assert n_cameras == len(cameras)
                     
-                    process_whole_video(plan_episode, plan_nr) #FOR debug only
-                    break
+    #                process_whole_video(plan_episode, plan_nr) #FOR debug only
                     futures.add(executor.submit(process_whole_video, plan_episode, plan_nr))
                     videos_used+=1
                     plan_nr +=1
