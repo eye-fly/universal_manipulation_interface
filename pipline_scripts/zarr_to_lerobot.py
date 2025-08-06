@@ -32,7 +32,7 @@ from lerobot.common.datasets.push_dataset_to_hub.utils import check_repo_id
 from src.lbot.umi_zarr_format import from_raw_to_lerobot_format, umi_feats
 
 def handedness_cor_system(r: R):
-    M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
+    M = np.diag([1, -1, 1])  # Reflect Y / Reverse Roll
     mr = M @ r.as_matrix() @ M
     return R.from_matrix(mr)
 
@@ -77,7 +77,8 @@ def load_zarr(zarr_path, dataset):
 
             rot = R.from_rotvec(crr_pose[3:])
 
-            change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
+            # change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
+            change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
             rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
             rot = R.from_matrix(rot_matrix)
 
