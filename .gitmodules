@@ -1,3 +1,4 @@
 [submodule "src/universal_manipulation_interface"]
 	path = src/universal_manipulation_interface
 	url = https://github.com/eye-fly/umi_slam.git
+	branch = gopro12
