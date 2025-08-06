@@ -195,7 +195,7 @@ def main(input, repo_id, out_res, out_fov,
     mutex = threading.Lock()
 
     def handedness_cor_system(r: R):
-        M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
+        M = np.diag([1, -1, 1])  # Reflect X / Reverse Pich
         mr = M @ r.as_matrix() @ M
         return R.from_matrix(mr)
 
