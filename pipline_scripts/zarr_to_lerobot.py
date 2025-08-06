@@ -77,7 +77,7 @@ def load_zarr(zarr_path, dataset):
 
             rot = R.from_rotvec(crr_pose[3:])
 
-            change_of_basis =  np.matrix('0 1 0; 0 0 1 ; 1 0 0')
+            change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
             rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
             rot = R.from_matrix(rot_matrix)
 
