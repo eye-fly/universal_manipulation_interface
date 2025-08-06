@@ -195,7 +195,7 @@ def main(input, repo_id, out_res, out_fov,
     mutex = threading.Lock()
 
     def handedness_cor_system(r: R):
-        M = np.diag([1, -1, 1])  # Reflect X / Reverse Pich
+        M = np.diag([-1, 1, 1])  # Reflect Y / Reverse Pich
         mr = M @ r.as_matrix() @ M
         return R.from_matrix(mr)
 
@@ -255,8 +255,8 @@ def main(input, repo_id, out_res, out_fov,
 
                 # # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
-                change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
-            #    # change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
+                # change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
+                change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
             #     offset = R.from_euler("xyz",[np.pi, 0, np.pi]).as_matrix()
                 rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
                 rot = R.from_matrix(rot_matrix)

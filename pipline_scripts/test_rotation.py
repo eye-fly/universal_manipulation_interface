@@ -158,15 +158,9 @@ def inverse_special(r):
     eu[0], eu[1],eu[2] = eu[0], -eu[1], eu[2]
     return R.from_euler("xyz", eu)
 
-def bad_change_cor_system(r: R, inverse=False):
-    # Mirror across Y-axis (e.g., left-handed system)
+def handedness_cor_system(r: R):
     M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
-    if inverse:
-        # Undo the coordinate change
-        mr = M @ r.as_matrix() @ M
-    else:
-        # Apply the coordinate change
-        mr = M @ r.as_matrix() @ M
+    mr = M @ r.as_matrix() @ M
     return R.from_matrix(mr)
 
 rot1_last = None
@@ -198,10 +192,10 @@ def pnt(initial, i,j, debug = False):
     pose = rot1_crr.as_euler("xyz")
 
 
-    rot2 = bad_change_cor_system(rot)
+    rot2 = handedness_cor_system(rot)
 
     if rot2_last is None:
-        rot2_last = bad_change_cor_system(initial)
+        rot2_last = handedness_cor_system(initial)
         # rot2_sim = R.from_euler('xyz',[0, 0,0 ])
     delta2 = (rot2) * (rot2_last).inv()
     delta2 = (delta2)
