@@ -194,10 +194,10 @@ def main(input, repo_id, out_res, out_fov,
     
     mutex = threading.Lock()
 
-    def handedness_cor_system(r: R):
-        M = np.diag([1, -1, 1])  # Reflect Y / Reverse Roll
-        mr = M @ r.as_matrix() @ M
-        return R.from_matrix(mr)
+    # def handedness_cor_system(r: R):
+    #     M = np.diag([1, -1, 1])  # Reflect Y / Reverse Roll
+    #     mr = M @ r.as_matrix() @ M
+    #     return R.from_matrix(mr)
 
     def process_whole_video(plan_episode, plan_nr):
         grippers = plan_episode['grippers']
@@ -261,7 +261,7 @@ def main(input, repo_id, out_res, out_fov,
                 rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
                 rot = R.from_matrix(rot_matrix)
 
-                rot = handedness_cor_system(rot)
+                # rot = handedness_cor_system(rot)
                 
 
                 crr_pose[3:] = rot.as_euler('xyz') #rot_rev.as_euler('xyz') 

@@ -82,7 +82,7 @@ def load_zarr(zarr_path, dataset):
             rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
             rot = R.from_matrix(rot_matrix)
 
-            rot = handedness_cor_system(rot)
+            # rot = handedness_cor_system(rot)
 
             crr_pose[3:] = rot.as_euler('xyz')
             crr_pose[0] = -crr_pose[0]
@@ -109,7 +109,7 @@ def load_zarr(zarr_path, dataset):
             dataset.add_frame(frame)
             last_pose = crr_pose
         dataset.save_episode()
-        break
+        # break
     dataset.push_to_hub(private=True)
 
 

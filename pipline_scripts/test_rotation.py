@@ -67,6 +67,8 @@ import logging
 import time
 from pathlib import Path
 from typing import Iterator
+import math 
+from numpy.linalg import inv
 
 import numpy as np
 import rerun as rr
@@ -158,10 +160,84 @@ def inverse_special(r):
     eu[0], eu[1],eu[2] = eu[0], -eu[1], eu[2]
     return R.from_euler("xyz", eu)
 
+
 def handedness_cor_system(r: R):
-    M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
-    mr = M @ r.as_matrix() @ M
+    M = np.diag([1, -1, -1])  # Reflect X / Reverse Pich
+    mr = M @ r.as_matrix() @ inv(M)
     return R.from_matrix(mr)
+
+def reversedMatrixZ(ang):
+    return np.matrix([[1, 0, 0], [0, math.cos(ang), math.sin(ang)], [0, -math.sin(ang), math.cos(ang)]] )  
+
+def handedness_cor_system(r: R):
+    eu = r.as_euler("xyz")
+
+    X = R.from_euler('x',eu[0]).as_matrix() #reversedMatrixX(-eu[0])
+    Y = R.from_euler('y',eu[1]).as_matrix()
+    Z = R.from_euler('z',eu[2]).as_matrix()
+    Z = reversedMatrixZ(eu[2]) # r.from_euler('z',eu[2]).as_matrix()
+
+    # M = np.diag([-1, 1, 1])  # Reflect X / Reverse Pich
+    mr = Z @ Y@ X
+    return R.from_matrix(mr)
+    
+def rvec_filp(r):
+    rvec = r.as_rotvec()
+    rvec[0], rvec[1],rvec[2] = -rvec[0], -rvec[1], -rvec[2]
+    return R.from_rotvec(rvec)
+
+# def handedness_cor_system(r: R):
+#     M =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
+
+
+#     mr = (M) @ r.as_matrix() @ inv(M)
+#     # return R.from_matrix(mr)
+#     eu = R.from_matrix(mr).as_euler("xyz")
+#     # eu = -1*eu
+#     eu[0], eu[1],eu[2] = -eu[0], -eu[1], -eu[2]
+#     return R.from_euler("xyz", eu)
+
+# i need to change direction of 1 rotation axis or swap 2 rotation axis with each other
+
+# multiple simmilar question 
+# https://stackoverflow.com/questions/1263072/changing-a-matrix-from-right-handed-to-left-handed-coordinate-system/39519079#39519079
+# https://stackoverflow.com/questions/1274936/flipping-a-quaternion-from-right-to-left-handed-coordinates
+# but bouth 
+
+
+# np.diag([1, 1, -1])  # Reflect X/Z plane
+# this is "equvalent" to rotation around z about angle pi, even 
+# thou determinant of matrix is different bouth of those operation 
+# resoult is swapped direction of 2 axis of rotation (in this case x->-x, y->-y)
+# handedness_cor_system(rot1_crr).approx_equal(rot1_crr) is true for "all" 
+def handedness_cor_system(r: R):
+    M =  np.matrix('1 0 0; 0 1 0 ; 0 0 -1')
+    rot = R.from_euler("z",np.pi).as_matrix()
+    M = rot @ M
+
+    mr = (M) @ r.as_matrix() @ inv(M)
+    return R.from_matrix(mr)
+
+# heddenes of the cord system during conversion to euler ang changes sing for all euler angles
+# https://github.com/benvanik/oculus-sdk/blob/master/LibOVR/Src/Kernel/OVR_Math.h function GetEulerAngles
+# but doing this and combining multiple rotations resoults in errors, 
+# my best guess is after converting back to R object assumption that euler_angles are in right-handed system is broken and resoults in incorrect representation
+def inverse_euler(r):
+    eu = r.as_euler("xyz")
+    eu *= -1
+    return R.from_euler("xyz", eu)
+
+
+# so currently the system isn't even left handed (in therm of rotation) because on left-handed system (+) rotation is clockwise
+# [opposite when in right-handed]
+# so no matter if in right-handed or left-handed (+pi/2) from [1,0,0] -> [0,1,0] while in current robot setpu it will give [0,-1, 0]
+
+def handedness_cor_system(r: R):
+    quat = r.as_quat()
+    # return R.from_quat([quat[1], -quat[2], -quat[0],quat[3]] )
+    return R.from_quat([quat[0], -quat[1], quat[2], -quat[3]] )
+
+
 
 rot1_last = None
 rot1_crr = R.from_euler('xyz',[0, 0,0 ])
@@ -171,14 +247,16 @@ rot2_crr = R.from_euler('xyz',[0, 0,0 ])
 rot2_sim = None
 def pnt(initial, i,j, debug = False):
     names = ["roll", "pich",  "yaw"]
-    rot_pich = R.from_euler('xyz',[0, -(np.pi/2)*(1.0*i/100),0 ])
-    pos_rot_pich = R.from_euler('xyz',[0, (np.pi/2)*(1.0*i/100),0 ])
-    rot_roll = R.from_euler('xyz',[ (np.pi/2)*(1.0*j/100),-(np.pi/2)*(0.5*j/100) ,0 ])
+    rot_pich = R.from_euler('xyz',[0, (np.pi/2)*(1.0*(i%50)/100),0 ])
+    rot_pich = R.from_euler('xyz',[(np.pi/2)*(1.0*i/100),0,0 ])
+    rot_pich = R.from_euler('xyz',[0, (np.pi/2)*(1.0*i/100),0 ])
+    # rot_pich = R.from_euler('xyz',[0, 0,(np.pi/2)*(1.0*i/100) ])
+    rot_roll = R.from_euler('xyz',[ (np.pi/2)*(1.0*j/100),(np.pi/2)*(0.75*j/100) , (np.pi/2)*(0.5*j/100) ])
 
     rot =  rot_roll *rot_pich* initial
 # =============================================
 
-    assert pos_rot_pich.approx_equal(rot_pich.inv())
+    # assert pos_rot_pich.approx_equal(rot_pich.inv())
 
     global rot1_last,rot1_crr, rot2_last, rot2_crr, rot2_sim
 
@@ -210,7 +288,7 @@ def pnt(initial, i,j, debug = False):
 
     print(delta1.as_euler("xyz"), delta1.as_rotvec())    
     # assert change_cor_system(delta2).approx_equal(delta1)
-    # assert change_cor_system(rot2_crr).approx_equal(rot1_crr)
+    # assert rvec_filp(rot1_crr).approx_equal(inverse_euler(rot1_crr))
     # print("="*100)
     # print(rot2_crr.as_rotvec())
     rotv_swap = (rot2_crr).as_euler("xyz")

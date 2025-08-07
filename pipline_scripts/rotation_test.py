@@ -1,5 +1,6 @@
 from scipy.spatial.transform import Rotation as R
 import numpy as np
+from numpy.linalg import inv
 
 
 
@@ -21,6 +22,12 @@ def bad_change_cor_system(r: R, inverse=False):
         # Apply the coordinate change
         mr = M @ r.as_matrix() @ M
     return R.from_matrix(mr)
+
+def bad_change_cor_system(r: R, inverse=False):
+    M =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
+    mr = inv(M) @ r.as_matrix() @ (M)
+    return R.from_matrix(mr)
+
 
 def change_cor_system(r, inverse=False):
     rvec = r.as_rotvec()
