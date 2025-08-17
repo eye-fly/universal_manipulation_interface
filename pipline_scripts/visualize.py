@@ -129,41 +129,61 @@ def get_minimum_angle_diff(rot_a, rot_b):
 
     return rot_diff.magnitude()
 
-def pose_actions_update(move_values, current_pose):
-        # move_values = ds_frame["action.pose"].numpy()
-    # current_pose[:3] += move_values[:3]# /2 # temporary to limit movment
-    # print( move_values[3:])
-    # print( current_pose[3:])
-    current_pose[3:] = (
-        R.from_euler("yxz", move_values[3:]) * R.from_euler("yxz", current_pose[3:]) 
-    ).as_euler("yxz")
-    # print(move_values[3:])
+# def inverse_special(r):
+#     eu = r.as_euler("xyz")
+#     # eu = -1*eu
+#     eu[0], eu[1],eu[2] = -eu[0], eu[1], eu[2]
+#     return R.from_euler("xyz", eu)
 
-    return current_pose, "pose"
+def inverse_special(r):
+    rvec = r.as_rotvec()
+    # eu = -1*eu
+    rvec[0]= -rvec[0]
+    return R.from_rotvec(rvec)
 
-orentations = []
-def find_min_angle(traj, robot_move_list):
-    pos = home_pose.copy()
+def get_rot_offset(robot_frame_pose, umi_pose):
+    expected_rot = inverse_special( R.from_euler("xyz", robot_frame_pose[3:]) )
 
-    print(robot_move_list)
-    print(home_pose)
-    robot_ground_truth, _ = pose_actions_update(robot_move_list, home_pose.copy())
-    robot_ground_truth = R.from_euler("xyz", robot_ground_truth[3:])
-    print(robot_ground_truth.as_euler("xyz"))
-    print("+"*100)
-    min_amp = math.inf
-    min_amp_idx = -1
+    umi_rot = R.from_euler("xyz", umi_pose[3:])
 
-    for i,row in enumerate(traj):
-        pos,_ = pose_actions_update(row["action.pose"].numpy(), pos)
+    rot_off = expected_rot * umi_rot.inv()
+    return rot_off.as_euler("xyz")
 
-        crr_rot = R.from_euler("xyz", pos[3:])
-        amp = get_minimum_angle_diff(robot_ground_truth, crr_rot)
+# def pose_actions_update(move_values, current_pose):
+#         # move_values = ds_frame["action.pose"].numpy()
+#     # current_pose[:3] += move_values[:3]# /2 # temporary to limit movment
+#     # print( move_values[3:])
+#     # print( current_pose[3:])
+#     current_pose[3:] = inverse_special(
+#         R.from_euler("yxz", move_values[3:]) * R.from_euler("yxz", current_pose[3:]) 
+#     ).as_euler("yxz")
+#     # print(move_values[3:])
 
-        if amp < min_amp:
-            min_amp = amp
-            min_amp_idx = i
-    print(min_amp_idx ,"->", min_amp , "  at timestamp:") # traj["timestamp"][min_amp_idx]
+#     return current_pose, "pose"
+
+# orentations = []
+# def find_min_angle(traj, robot_move_list):
+#     pos = home_pose.copy()
+
+#     print(robot_move_list)
+#     print(home_pose)
+#     robot_ground_truth, _ = pose_actions_update(robot_move_list, home_pose.copy())
+#     robot_ground_truth = R.from_euler("xyz", robot_ground_truth[3:])
+#     print(robot_ground_truth.as_euler("xyz"))
+#     print("+"*100)
+#     min_amp = math.inf
+#     min_amp_idx = -1
+
+#     for i,row in enumerate(traj):
+#         pos,_ = pose_actions_update(row["action.pose"].numpy(), pos)
+
+#         crr_rot = R.from_euler("xyz", pos[3:])
+#         amp = get_minimum_angle_diff(robot_ground_truth, crr_rot)
+
+#         if amp < min_amp:
+#             min_amp = amp
+#             min_amp_idx = i
+#     print(min_amp_idx ,"->", min_amp , "  at timestamp:") # traj["timestamp"][min_amp_idx]
 
 
 
@@ -233,9 +253,9 @@ def visualize_dataset(
         # move_rot2 = R.from_euler("xyz", euler_swap)
         # # -----------------
 
-        current_pose[3:] = (
-            move_rot * R.from_euler("xyz", current_pose[3:])
-        ).as_euler("xyz")
+        crr_inverted_back = inverse_special(R.from_euler("xyz",current_pose[3:]) )
+        current_pose[3:] = inverse_special(
+            move_rot * crr_inverted_back ).as_euler("xyz")
 
         return current_pose, "pose"
 
@@ -260,11 +280,13 @@ def visualize_dataset(
     # ep 2 -> traj 1
     # ep 3 -> traj 2
     # find_min_angle(dataset,TRAJECTORIES_D[0][1])
+    offsets =[]
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         # print(batch)
         # iterate over the batch
         for i in range(len(batch["index"])):
-
+            # print(batch["task"][i])
+            # print(batch["prompt"][i])
             # rr.set_time_sequence("frame_index", batch["frame_index"][i].item())
             # rr.set_time_seconds("timestamp", batch["timestamp"][i].item())
             
@@ -303,6 +325,8 @@ def visualize_dataset(
                  lastPose,_ = pose_actions_update(batch["action.pose"][i], lastPose)
                  last_robot_rec_pose ,_ = pose_actions_update(batch["action.pose"][i], last_robot_rec_pose)
 
+                 rot_off = get_rot_offset(last_robot_rec_pose, batch["observation.state.pose"][i])
+                 offsets.append(R.from_euler("xyz", rot_off ) )
                  for dim_idx, val in enumerate(batch["action.pose"][i]):
                     name = dataset.meta.features["action.pose"]["names"][dim_idx]
 
@@ -313,6 +337,8 @@ def visualize_dataset(
 
                     rr.log(f"action.pose/{name}", rr.Scalar(print_val))
                     rr.log(f"robot.pose/{name}", rr.Scalar(print_robot_val))
+                    if dim_idx > 2:
+                        rr.log(f"offset/{name}", rr.Scalar(rot_off[dim_idx-3]))
 
             if "next.done" in batch:
                 rr.log("next.done", rr.Scalar(batch["next.done"][i].item()))
@@ -322,6 +348,15 @@ def visualize_dataset(
 
             if "next.success" in batch:
                 rr.log("next.success", rr.Scalar(batch["next.success"][i].item()))
+    
+    off_0 = offsets[0]
+    ii = 0
+    for rot in offsets:
+        
+        if not rot.approx_equal(off_0):
+            print(ii)
+        ii+=1
+
 
     if mode == "local" and save:
         # save .rrd locally

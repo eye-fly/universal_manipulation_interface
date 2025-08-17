@@ -232,6 +232,9 @@ def inverse_euler(r):
 # [opposite when in right-handed]
 # so no matter if in right-handed or left-handed (+pi/2) from [1,0,0] -> [0,1,0] while in current robot setpu it will give [0,-1, 0]
 
+
+# it might be good idea to checki if currently replay actualy work (test case with action rolout with 0rvec[1]) 
+
 def handedness_cor_system(r: R):
     quat = r.as_quat()
     # return R.from_quat([quat[1], -quat[2], -quat[0],quat[3]] )

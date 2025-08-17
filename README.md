@@ -37,6 +37,12 @@ uv run pipline_scripts/07_generate_el_dataset.py example_demo_session/
 
 uv run pipline_scripts/visualize.py --repo-id eyefly2/test --episode-index 0
 
+docker run --rm -it -v  /home/jacek-muszynski/Videos:/home/jacek-muszynski/Videos \
+    -e HF_TOKEN="" \
+    -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock \
+    umi
+
+uv run pipline_scripts/zarr_to_lerobot.py -rp eyefly2/cup -p /home/jacek-muszynski/Videos/cup_in_the_wild.zarr
 
 
 =-------------------------

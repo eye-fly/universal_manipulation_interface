@@ -264,7 +264,7 @@ def main(input, repo_id, out_res, out_fov,
                 # rot = handedness_cor_system(rot)
                 
 
-                crr_pose[3:] = rot.as_euler('xyz') #rot_rev.as_euler('xyz') 
+                crr_pose[3:] = rot.as_euler('xyz')
                 # crr_pose[3], crr_pose[4],crr_pose[5] = euler_yxz[0], euler_yxz[1], euler_yxz[2]
 
                 # print(crr_pose[3:])
@@ -285,6 +285,7 @@ def main(input, repo_id, out_res, out_fov,
 
                 frame["observation.state.pose"]  = crr_pose
                 frame["action.gripper"] = np.array([gripper_widths[frame_i]], dtype='float32')
+                frame["observation.state.gripper"] = np.array([gripper_widths[frame_i]], dtype='float32')
                 
                 frame["action.pose"] = np.zeros_like(crr_pose)
                 if not (last_pose is None):
