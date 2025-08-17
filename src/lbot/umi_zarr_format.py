@@ -154,6 +154,12 @@ def umi_feats(video_w,viedo_h):
                 "shape": (6,),
                 "names": ["x", "y", "z", "roll", "pitch", "yaw"],
             },
+            "observation.state.gripper": {
+                "dtype": "float32",
+                "shape": (1,),
+                "names": ["gripper"],
+            },
+
             "action.pose":{
                 "dtype": "float32",
                 "shape": (6,),
