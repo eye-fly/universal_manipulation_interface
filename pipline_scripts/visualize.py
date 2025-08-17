@@ -141,13 +141,35 @@ def inverse_special(r):
     rvec[0]= -rvec[0]
     return R.from_rotvec(rvec)
 
+def inverse_pose(pose):
+    new_pose = pose.copy()
+    r = R.from_euler("xyz", pose[3:])
+    new_pose[3:] = inverse_special(r).as_euler("xyz")
+    return new_pose
+
 def get_rot_offset(robot_frame_pose, umi_pose):
     expected_rot = inverse_special( R.from_euler("xyz", robot_frame_pose[3:]) )
 
     umi_rot = R.from_euler("xyz", umi_pose[3:])
 
-    rot_off = expected_rot * umi_rot.inv()
+    rot_off = expected_rot* umi_rot.inv()
+    rot_off = umi_rot.inv()*expected_rot
     return rot_off.as_euler("xyz")
+
+def offset_rot(umi_pose):
+    offset = [-0.11115846,  1.19299307, -0.59110642]
+    offset_rot = R.from_euler("xyz", offset)
+
+
+    ret_pose = umi_pose.copy()
+
+    umi_rot = R.from_euler("xyz", umi_pose[3:])
+
+    ret_pose[3:] = (umi_rot*offset_rot).as_euler("xyz")
+    return ret_pose
+
+
+
 
 # def pose_actions_update(move_values, current_pose):
 #         # move_values = ds_frame["action.pose"].numpy()
@@ -303,6 +325,8 @@ def visualize_dataset(
 
             # display each dimension of observed state space (e.g. agent position in joint space)
             if "observation.state.pose" in batch:
+                crr_pose_offseted = offset_rot(batch["observation.state.pose"][i].numpy())
+                crr_pose_offseted= inverse_pose(crr_pose_offseted)
                 for dim_idx, val in enumerate(batch["observation.state.pose"][i]):
                     name = dataset.meta.features["observation.state.pose"]["names"][dim_idx]
 
@@ -312,7 +336,7 @@ def visualize_dataset(
                         lastPose[dim_idx] = lastPose[dim_idx] + val.item()
                         print_val = lastPose[dim_idx]
                     else:
-                        print_val = val.item()
+                        print_val = crr_pose_offseted[dim_idx]
 
 
                     rr.log(f"state/{name}", rr.Scalar(print_val))
@@ -350,12 +374,13 @@ def visualize_dataset(
                 rr.log("next.success", rr.Scalar(batch["next.success"][i].item()))
     
     off_0 = offsets[0]
-    ii = 0
-    for rot in offsets:
+    print(off_0.as_euler("xyz"))
+    # ii = 0
+    # for rot in offsets:
         
-        if not rot.approx_equal(off_0):
-            print(ii)
-        ii+=1
+    #     if not rot.approx_equal(off_0):
+    #         print(ii)
+    #     ii+=1
 
 
     if mode == "local" and save:

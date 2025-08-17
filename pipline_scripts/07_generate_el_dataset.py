@@ -235,6 +235,18 @@ def main(input, repo_id, out_res, out_fov,
         # print(video_arr)
 
         
+        def offset_rot(umi_pose):
+            offset = [-0.11115846,  1.19299307, -0.59110642]
+            offset_rot = R.from_euler("xyz", offset)
+
+
+            ret_pose = umi_pose.copy()
+
+            umi_rot = R.from_euler("xyz", umi_pose[3:])
+
+            ret_pose[3:] = (umi_rot*offset_rot).as_euler("xyz")
+            return ret_pose
+
         with mutex:
             frame_n = gripper['tcp_pose'].shape[0]
 
@@ -283,7 +295,9 @@ def main(input, repo_id, out_res, out_fov,
 
 
 
-                frame["observation.state.pose"]  = crr_pose
+                frame["observation.umi.state.pose"]  = crr_pose
+                frame["observation.state.pose"]  = offset_rot(crr_pose)
+                
                 frame["action.gripper"] = np.array([gripper_widths[frame_i]], dtype='float32')
                 frame["observation.state.gripper"] = np.array([gripper_widths[frame_i]], dtype='float32')
                 

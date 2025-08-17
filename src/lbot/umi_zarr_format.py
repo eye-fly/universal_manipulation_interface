@@ -149,6 +149,12 @@ def load_from_raw(
 
 def umi_feats(video_w,viedo_h):
     return {
+            "observation.umi.state.pose": {
+                "dtype": "float32",
+                "shape": (6,),
+                "names": ["x", "y", "z", "roll", "pitch", "yaw"],
+            },
+
             "observation.state.pose": {
                 "dtype": "float32",
                 "shape": (6,),
