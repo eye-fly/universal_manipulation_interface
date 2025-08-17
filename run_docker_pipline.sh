@@ -1,4 +1,7 @@
 #!/bin/bash
+
+#TODO probobly --gpu=all needs to be added to allow for gpu acc
+
 set -euo pipefail
 
 usage() {

@@ -30,6 +30,7 @@ from lerobot.common.datasets.video_utils import VideoFrame, encode_video_frames
 from lerobot.common.datasets.lerobot_dataset import CODEBASE_VERSION, LeRobotDataset
 from lerobot.common.datasets.push_dataset_to_hub.utils import check_repo_id
 from src.lbot.umi_zarr_format import from_raw_to_lerobot_format, umi_feats
+from src.lbot.util import offset_rot
 
 def handedness_cor_system(r: R):
     M = np.diag([1, -1, 1])  # Reflect Y / Reverse Roll
@@ -88,8 +89,11 @@ def load_zarr(zarr_path, dataset):
             crr_pose[0] = -crr_pose[0]
             crr_pose[1] = -crr_pose[1]
 
-            frame["observation.state.pose"]  = crr_pose
+            frame["observation.umi.state.pose"] = crr_pose
+            frame["observation.state.pose"]  = offset_rot(crr_pose)
+
             frame["action.gripper"] = gripper_width[frame_idx]
+            frame["observation.state.gripper"]= gripper_width[frame_idx]
             
             frame["action.pose"] = np.zeros_like(crr_pose)
             if not (last_pose is None):

@@ -37,6 +37,8 @@ from src.universal_manipulation_interface.diffusion_policy.common.replay_buffer 
 from src.universal_manipulation_interface.diffusion_policy.codecs.imagecodecs_numcodecs import register_codecs, JpegXl
 
 from src.lbot.umi_zarr_format import from_raw_to_lerobot_format, umi_feats
+from src.lbot.util import offset_rot
+
 from lerobot.common.datasets.lerobot_dataset import CODEBASE_VERSION, LeRobotDataset
 from lerobot.common.datasets.push_dataset_to_hub.utils import check_repo_id
 
@@ -233,19 +235,6 @@ def main(input, repo_id, out_res, out_fov,
         print(eef_pose.shape)
         print(len(video_arr))
         # print(video_arr)
-
-        
-        def offset_rot(umi_pose):
-            offset = [-0.11115846,  1.19299307, -0.59110642]
-            offset_rot = R.from_euler("xyz", offset)
-
-
-            ret_pose = umi_pose.copy()
-
-            umi_rot = R.from_euler("xyz", umi_pose[3:])
-
-            ret_pose[3:] = (umi_rot*offset_rot).as_euler("xyz")
-            return ret_pose
 
         with mutex:
             frame_n = gripper['tcp_pose'].shape[0]
