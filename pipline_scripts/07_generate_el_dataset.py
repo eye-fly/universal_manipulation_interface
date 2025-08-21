@@ -256,9 +256,10 @@ def main(input, repo_id, out_res, out_fov,
 
                 # # crr_pose[3:] = R.from_rotvec([rot[2], rot[1], rot[0]]).as_euler('xyz') #  TOCHECK: x,y axis are/where swiched compared to simulation
                 
-                # change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
-                change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
+                change_of_basis =  np.matrix('1 0 0; 0 1 0 ; 0 0 1')
+                change_of_basis = R.from_euler('xyz',[0,0, -np.pi/2 ]).as_matrix()
             #     offset = R.from_euler("xyz",[np.pi, 0, np.pi]).as_matrix()
+
                 rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
                 rot = R.from_matrix(rot_matrix)
 
@@ -274,8 +275,7 @@ def main(input, repo_id, out_res, out_fov,
                 # # swap x with y axis
                 # crr_pose[0], crr_pose[1] = crr_pose[1], crr_pose[0]
                 # # reverse x, y
-                crr_pose[0] = -crr_pose[0]
-                crr_pose[1] = -crr_pose[1]
+                crr_pose[0],crr_pose[1] = -crr_pose[1], crr_pose[0]
 
                 # # reverse pitch and yaw
                 # frame["observation.state.pose"][4] = -frame["observation.state.pose"][4]

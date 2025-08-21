@@ -54,9 +54,9 @@ distant$ python -m lerobot.scripts.visualize_dataset \
     --repo-id lerobot/pusht \
     --episode-index 0 \
     --mode distant \
-    --ws-port 9087
+    --ws-port 9876
 
-local$ rerun ws://localhost:9087
+local$ rerun ws://localhost:9876
 ```
 
 """
@@ -275,8 +275,8 @@ def visualize_dataset(
         # move_rot2 = R.from_euler("xyz", euler_swap)
         # # -----------------
 
-        crr_inverted_back = inverse_special(R.from_euler("xyz",current_pose[3:]) )
-        current_pose[3:] = inverse_special(
+        crr_inverted_back = (R.from_euler("xyz",current_pose[3:]) )
+        current_pose[3:] = (
             move_rot * crr_inverted_back ).as_euler("xyz")
 
         return current_pose, "pose"
