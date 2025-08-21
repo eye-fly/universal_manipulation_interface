@@ -89,7 +89,7 @@ def load_zarr(zarr_path, dataset):
             crr_pose[0],crr_pose[1] = -crr_pose[1], crr_pose[0]
 
             frame["observation.umi.state.pose"] = crr_pose
-            frame["observation.state.pose"]  = (crr_pose)
+            frame["observation.state.pose"]  = offset_rot(crr_pose)
 
             frame["action.gripper"] = gripper_width[frame_idx]
             frame["observation.state.gripper"]= gripper_width[frame_idx]

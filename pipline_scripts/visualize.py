@@ -135,20 +135,20 @@ def get_minimum_angle_diff(rot_a, rot_b):
 #     eu[0], eu[1],eu[2] = -eu[0], eu[1], eu[2]
 #     return R.from_euler("xyz", eu)
 
-def inverse_special(r):
-    rvec = r.as_rotvec()
-    # eu = -1*eu
-    rvec[0]= -rvec[0]
-    return R.from_rotvec(rvec)
+# def inverse_special(r):
+#     rvec = r.as_rotvec()
+#     # eu = -1*eu
+#     rvec[0]= -rvec[0]
+#     return R.from_rotvec(rvec)
 
-def inverse_pose(pose):
-    new_pose = pose.copy()
-    r = R.from_euler("xyz", pose[3:])
-    new_pose[3:] = inverse_special(r).as_euler("xyz")
-    return new_pose
+# def inverse_pose(pose):
+#     new_pose = pose.copy()
+#     r = R.from_euler("xyz", pose[3:])
+#     new_pose[3:] = inverse_special(r).as_euler("xyz")
+#     return new_pose
 
 def get_rot_offset(robot_frame_pose, umi_pose):
-    expected_rot = inverse_special( R.from_euler("xyz", robot_frame_pose[3:]) )
+    expected_rot = ( R.from_euler("xyz", robot_frame_pose[3:]) )
 
     umi_rot = R.from_euler("xyz", umi_pose[3:])
 
