@@ -79,18 +79,17 @@ def load_zarr(zarr_path, dataset):
             rot = R.from_rotvec(crr_pose[3:])
 
             # change_of_basis =  np.matrix('0 1 0; 1 0 0 ; 0 0 1')
-            change_of_basis = R.from_euler('xyz',[0,0,np.pi/2 ]).as_matrix()
+            change_of_basis = R.from_euler('xyz',[0,0,-np.pi/2 ]).as_matrix()
             rot_matrix = inv(change_of_basis) @ rot.as_matrix() @ change_of_basis
             rot = R.from_matrix(rot_matrix)
 
             # rot = handedness_cor_system(rot)
 
             crr_pose[3:] = rot.as_euler('xyz')
-            crr_pose[0] = -crr_pose[0]
-            crr_pose[1] = -crr_pose[1]
+            crr_pose[0],crr_pose[1] = -crr_pose[1], crr_pose[0]
 
             frame["observation.umi.state.pose"] = crr_pose
-            frame["observation.state.pose"]  = offset_rot(crr_pose)
+            frame["observation.state.pose"]  = (crr_pose)
 
             frame["action.gripper"] = gripper_width[frame_idx]
             frame["observation.state.gripper"]= gripper_width[frame_idx]

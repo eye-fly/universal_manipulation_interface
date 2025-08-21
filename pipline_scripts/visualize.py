@@ -327,7 +327,7 @@ def visualize_dataset(
             if "observation.state.pose" in batch:
                 crr_pose_offseted = batch["observation.state.pose"][i].numpy()
                 # crr_pose_offseted = offset_rot(batch["observation.state.pose"][i].numpy())
-                crr_pose_offseted= inverse_pose(crr_pose_offseted)
+                # crr_pose_offseted= inverse_pose(crr_pose_offseted)
                 for dim_idx, val in enumerate(batch["observation.state.pose"][i]):
                     name = dataset.meta.features["observation.state.pose"]["names"][dim_idx]
 
