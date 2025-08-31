@@ -103,6 +103,7 @@ DC_RUN="docker run --rm -it -v  $VIDEO_FULLPATH:$VIDEO_FULLPATH \
     -e SLAM_SET_PATH="$SLAM_SET_PATH" \
     -e HF_TOKEN="$HF_TOKEN" \
     -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock \
+    --gpus all \
     umi bash -c"
 if ! [ -d "$VIDEO_FULLPATH" ]; then
    echo "$VIDEO_FULLPATH: No such directory"

@@ -100,7 +100,7 @@ def to_hwc_uint8_numpy(chw_float32_torch: torch.Tensor) -> np.ndarray:
     return hwc_uint8_numpy
 
 
-home_pose = [0,0,0,-2.70767309, -0.67766038, -2.99060844]
+home_pose = [-0.56417899, -0.54316137 , 0.0597518,  -2.25029662 ,-0.66071279,  2.40649726]
 TRAJECTORIES_D = [
     # [[0,0,0 ,0,0,0], [0.3,0,0 ,0,0,0], [-0.6,0,0 ,0,0,0], [0.3,0,0 ,0,0,0] ],
     # [[0,0.1,0 ,0,0,0], [0,-0.3,0 ,0,0,0],[0,0.2,0 ,0,0,0] ],
@@ -306,8 +306,9 @@ def visualize_dataset(
     for batch in tqdm.tqdm(dataloader, total=len(dataloader)):
         # print(batch)
         # iterate over the batch
+        print(batch["task"][0])
         for i in range(len(batch["index"])):
-            # print(batch["task"][i])
+            
             # print(batch["prompt"][i])
             # rr.set_time_sequence("frame_index", batch["frame_index"][i].item())
             # rr.set_time_seconds("timestamp", batch["timestamp"][i].item())

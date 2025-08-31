@@ -54,6 +54,9 @@ def load_zarr(zarr_path, dataset):
 
     episode_ends = zarr_data["meta/episode_ends"][:]
     num_episodes = episode_ends.shape[0]
+
+    num_episodes = 200 # temporary to limint num of traj
+
     # We convert it in torch tensor later because the jit function does not support torch tensors
     episode_ends = torch.from_numpy(episode_ends)
 
@@ -91,7 +94,10 @@ def load_zarr(zarr_path, dataset):
             frame["observation.umi.state.pose"] = crr_pose
             frame["observation.state.pose"]  = offset_rot(crr_pose)
 
-            frame["action.gripper"] = gripper_width[frame_idx]
+            if frame_idx+1 < to_idx:
+                frame["action.gripper"] = gripper_width[frame_idx+1]
+            else:
+                frame["action.gripper"] = gripper_width[frame_idx]
             frame["observation.state.gripper"]= gripper_width[frame_idx]
             
             frame["action.pose"] = np.zeros_like(crr_pose)

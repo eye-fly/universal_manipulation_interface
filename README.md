@@ -42,14 +42,12 @@ uv run pipline_scripts/visualize.py --repo-id eyefly2/test --episode-index 0
 
 docker run --rm -it -v  /home/jacek-muszynski/Videos:/home/jacek-muszynski/Videos     -e HF_TOKEN=""     -v /usr/bin/docker:/usr/bin/docker -v /var/run/docker.sock:/var/run/docker.sock     --privileged --network=host -e NVIDIA_DRIVER_CAPABILITIES=all -e DISPLAY=$DISPLAY   --gpus all  umi
 
-python pipline_scripts/visualize.py --mode distant --ws-port 9876 --repo-id eyefly2/robot --episode-index 0 
-
 python pipline_scripts/visualize.py --repo-id eyefly2/robot --episode-index 0 
 
 
 
 uv run pipline_scripts/zarr_to_lerobot.py -rp eyefly2/cup -p /home/jacek-muszynski/Videos/cup_in_the_wild.zarr
-
+python pipline_scripts/zarr_to_lerobot.py -rp eyefly2/cup_subset -p /home/jacek-muszynski/Videos/cup_in_the_wild.zarr
 
 =-------------------------
 bash run_docker_pipline.sh -n eyefly2/nomagic ~/Videos/nomagic/
